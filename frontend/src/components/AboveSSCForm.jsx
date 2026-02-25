@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import './aboveSSCForm.css';
+import LogoBackButton from './LogoBackButton';
 import { useLanguage } from '../context/LanguageContext';
 import { API_ENDPOINTS } from '../api/config';
 
@@ -79,7 +80,7 @@ const AboveSSCForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
-        
+
         try {
             // Validate required fields
             const missingFields = [];
@@ -90,13 +91,13 @@ const AboveSSCForm = () => {
             if (!formData.gender) missingFields.push('Gender (Personal Details)');
             if (!formData.from?.trim()) missingFields.push('From Place (Route Details)');
             if (!formData.to?.trim()) missingFields.push('To Place (Route Details)');
-            
+
             if (missingFields.length > 0) {
                 alert('Please fill in the following required fields:\\n\\n' + missingFields.join('\\n'));
                 setIsSubmitting(false);
                 return;
             }
-            
+
             const payload = {
                 applicationType: 'student_above_ssc',
                 fullName: formData.name,
@@ -157,6 +158,7 @@ const AboveSSCForm = () => {
 
     return (
         <div className="form-page-container">
+            <LogoBackButton />
             <div className="form-card">
                 <div className="form-title-bar">
                     <h2 className="form-title">{t('student_above_ssc_title')}</h2>
@@ -302,10 +304,6 @@ const AboveSSCForm = () => {
                             <div className="form-group">
                                 <label>{t('from_place')} <span className="required-star">*</span></label>
                                 <input type="text" name="from" value={formData.from} onChange={handleChange} required placeholder={t('starting_point')} />
-                            </div>
-                            <div className="form-group">
-                                <label>{t('via')}</label>
-                                <input type="text" name="via" value={formData.via} onChange={handleChange} placeholder={t('via')} />
                             </div>
                             <div className="form-group">
                                 <label>{t('to_place')} <span className="required-star">*</span></label>

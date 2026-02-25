@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import './GovEmpApplicationForm.css';
+import LogoBackButton from './LogoBackButton';
 import { useLanguage } from '../context/LanguageContext';
 import { API_ENDPOINTS } from '../api/config';
 
@@ -66,11 +67,11 @@ const GovEmpApplicationForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
-        
+
         try {
             const form = e.target;
             const formDataObj = new FormData(form);
-            
+
             // Log ALL form fields to console for debugging
             console.log('=== FORM DATA ENTRIES ===');
             const entries = {};
@@ -80,7 +81,7 @@ const GovEmpApplicationForm = () => {
             }
             console.log('Total fields found:', Object.keys(entries).length);
             console.log('=========================');
-            
+
             // Required field validation with section info
             const requiredFields = [
                 { name: 'fullName', label: 'Full Name', section: '1. Applicant Details' },
@@ -93,7 +94,7 @@ const GovEmpApplicationForm = () => {
                 { name: 'fromPlace', label: 'From Place', section: '3. Route Details' },
                 { name: 'toPlace', label: 'To Place', section: '3. Route Details' }
             ];
-            
+
             const missingFields = [];
             for (const field of requiredFields) {
                 const value = formDataObj.get(field.name);
@@ -102,13 +103,13 @@ const GovEmpApplicationForm = () => {
                     missingFields.push(`${field.label} (${field.section})`);
                 }
             }
-            
+
             if (missingFields.length > 0) {
                 alert(`Please fill in the following required fields:\n\n${missingFields.join('\n')}`);
                 setIsSubmitting(false);
                 return;
             }
-            
+
             // DEBUG: Log what's being sent
             console.log('=== FORM DATA BEING SENT ===');
             console.log('fullName:', formDataObj.get('fullName'));
@@ -118,7 +119,7 @@ const GovEmpApplicationForm = () => {
                 console.log(`${key}: ${value}`);
             }
             console.log('===========================');
-            
+
             const payload = {
                 applicationType: 'gov_employee',
                 fullName: formDataObj.get('fullName'),
@@ -149,13 +150,13 @@ const GovEmpApplicationForm = () => {
                 salaryCertificateDoc: documents.salaryCertificateDoc,
                 addressProofDoc: documents.addressProofDoc
             };
-            
+
             const response = await fetch(API_ENDPOINTS.submitApplication, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            
+
             const data = await response.json();
             if (response.ok) {
                 alert(`Application submitted successfully! Your Application ID: ${data.applicationId}`);
@@ -175,6 +176,7 @@ const GovEmpApplicationForm = () => {
 
     return (
         <div className="gov-emp-page-container">
+            <LogoBackButton />
             <div className="gov-emp-form-wrapper">
                 <h2>{t('gov_emp_pass_title')}</h2>
                 <h4>(RTC – GOV/EMP BUS PASS)</h4>

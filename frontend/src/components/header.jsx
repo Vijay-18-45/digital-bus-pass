@@ -73,7 +73,7 @@ const Header = () => {
         </div>
         <div>
           <p className="support-text">{t('support_text')}</p>
-          <h2 className="support-number">0866 2570005</h2>
+          <h2 className="support-number">XXXX XXXX</h2>
         </div>
       </div>
 

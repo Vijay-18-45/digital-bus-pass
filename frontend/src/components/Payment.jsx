@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import LogoBackButton from './LogoBackButton';
 import BusPassCard from "./BusPassCard";
 import "./Payment.css";
 import Header from "./header";
@@ -157,6 +158,7 @@ const Payment = ({ mode = "new" }) => {
 
     return (
         <div className="payment-page">
+            <LogoBackButton top="120px" />
             <Header />
             <div className="payment-wrapper">
 
