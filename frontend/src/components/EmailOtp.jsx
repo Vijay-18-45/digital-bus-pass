@@ -95,41 +95,39 @@ function EmailOtp() {
 
               <div className="role-toggle-container">
                 <button
-                  className={`role-btn ${role === 'student' ? 'active' : ''}`}
-                  onClick={() => !otpSent && setRole('student')}
-                  disabled={otpSent}
+                  className="role-btn active"
                 >
                   As Student
                 </button>
                 <button
-                  className={`role-btn ${role === 'admin' ? 'active' : ''}`}
-                  onClick={() => !otpSent && setRole('admin')}
-                  disabled={otpSent}
+                  className="role-btn"
+                  onClick={() => navigate('/admin')}
                 >
                   Administrator
                 </button>
               </div>
 
               <div className="form-container">
-                {!otpSent ? (
-                  <div className="input-group">
-                    <label>Email Address</label>
-                    <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                        <polyline points="22,6 12,13 2,6"></polyline>
-                      </svg>
-                      <input
-                        type="email"
-                        placeholder="example@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%' }}
-                      />
-                    </div>
+                <div className="input-group">
+                  <label>Email Address</label>
+                  <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center', opacity: otpSent ? 0.6 : 1, backgroundColor: otpSent ? '#eee' : 'white' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                      <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <input
+                      type="email"
+                      placeholder="example@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={otpSent}
+                      style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', color: otpSent ? '#888' : 'inherit' }}
+                    />
                   </div>
-                ) : (
-                  <div className="input-group">
+                </div>
+
+                {otpSent && (
+                  <div className="input-group" style={{ marginTop: '15px' }}>
                     <label>Enter OTP</label>
                     <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
@@ -147,7 +145,7 @@ function EmailOtp() {
                   </div>
                 )}
 
-                <button className="submit-btn" onClick={!otpSent ? handleSendOtp : handleVerify}>
+                <button className="submit-btn" onClick={!otpSent ? handleSendOtp : handleVerify} style={{ marginTop: '20px' }}>
                   {!otpSent ? "Send OTP" : "Verify OTP"}
                 </button>
 
