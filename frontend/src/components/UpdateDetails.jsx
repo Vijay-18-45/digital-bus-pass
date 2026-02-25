@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './UpdateDetails.css';
+import LogoBackButton from './LogoBackButton';
 import { useLanguage } from '../context/LanguageContext';
 
 const UpdateDetails = () => {
@@ -70,6 +71,7 @@ const UpdateDetails = () => {
 
     return (
         <div className="update-page-container">
+            <LogoBackButton />
             <div className="update-card">
                 <h2>{t('update_details_title')}</h2>
                 <p className="update-subtitle">{t('update_details_subtitle')}</p>

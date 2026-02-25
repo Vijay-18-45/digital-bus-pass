@@ -2,10 +2,16 @@
     min-height: 100vh;
     background: var(--bg-color);
     display: flex;
+    flex-direction: column;
+    font-family: inherit;
+}
+
+.trace-content-wrapper {
+    flex: 1;
+    display: flex;
     justify-content: center;
     align-items: center;
     padding: 40px 20px;
-    font-family: inherit;
 }
 
 .trace-card {

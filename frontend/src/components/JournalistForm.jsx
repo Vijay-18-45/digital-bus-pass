@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import './JournalistForm.css';
+import LogoBackButton from './LogoBackButton';
 import { useLanguage } from '../context/LanguageContext';
 import { API_ENDPOINTS } from '../api/config';
 
@@ -65,11 +66,11 @@ const JournalistForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
-        
+
         try {
             const form = formRef.current;
             const formDataObj = new FormData(form);
-            
+
             // Required field validation
             const requiredFields = [
                 { name: 'fullName', label: 'Full Name', section: 'Personal Details' },
@@ -82,7 +83,7 @@ const JournalistForm = () => {
                 { name: 'fromPlace', label: 'From Place', section: 'Route Details' },
                 { name: 'toPlace', label: 'To Place', section: 'Route Details' }
             ];
-            
+
             const missingFields = [];
             for (const field of requiredFields) {
                 const value = formDataObj.get(field.name);
@@ -90,13 +91,13 @@ const JournalistForm = () => {
                     missingFields.push(`${field.label} (${field.section})`);
                 }
             }
-            
+
             if (missingFields.length > 0) {
                 alert(`Please fill in the following required fields:\n\n${missingFields.join('\n')}`);
                 setIsSubmitting(false);
                 return;
             }
-            
+
             const payload = {
                 applicationType: 'journalist',
                 fullName: formDataObj.get('fullName'),
@@ -119,13 +120,13 @@ const JournalistForm = () => {
                 idCardDoc: documents.idCardDoc,
                 addressProofDoc: documents.addressProofDoc
             };
-            
+
             const response = await fetch(API_ENDPOINTS.submitApplication, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            
+
             const data = await response.json();
             if (response.ok) {
                 alert(`Application submitted successfully! Your Application ID: ${data.applicationId}`);
@@ -145,6 +146,7 @@ const JournalistForm = () => {
 
     return (
         <div className="journalist-page-container">
+            <LogoBackButton />
             <div className="journalist-form-wrapper">
                 <h2>{t('journalist_pass_title')}</h2>
                 <form ref={formRef} onSubmit={handleSubmit}>

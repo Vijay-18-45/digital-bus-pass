@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import LogoBackButton from './LogoBackButton';
 import Header from "./header";
 import BusPassCard from "./BusPassCard";
 import "./MyPass.css";
@@ -31,6 +32,7 @@ const MyPass = () => {
 
     return (
         <div className="mypass-page">
+            <LogoBackButton top="120px" />
             <Header />
             <div className="mypass-container">
                 <div className="mypass-header">

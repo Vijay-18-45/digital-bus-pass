@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import './CitizenForm.css';
+import LogoBackButton from './LogoBackButton';
 import { useLanguage } from '../context/LanguageContext';
 import { API_ENDPOINTS } from '../api/config';
 
@@ -65,10 +66,10 @@ const CitizenForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
-        
+
         const form = e.target;
         const formDataObj = new FormData(form);
-        
+
         // Validate required fields
         const missingFields = [];
         if (!formDataObj.get('fullName')?.trim()) missingFields.push('Full Name (Applicant Details)');
@@ -83,13 +84,13 @@ const CitizenForm = () => {
         if (!formDataObj.get('villageTown')?.trim()) missingFields.push('Village/Town (Address Details)');
         if (!formDataObj.get('pincode')?.trim()) missingFields.push('Pincode (Address Details)');
         if (!formDataObj.get('addressProofType')) missingFields.push('Address Proof Type (Documents)');
-        
+
         if (missingFields.length > 0) {
             alert('Please fill the following required fields:\n\n' + missingFields.join('\n'));
             setIsSubmitting(false);
             return;
         }
-        
+
         try {
             const payload = {
                 applicationType: 'citizen',
@@ -136,6 +137,7 @@ const CitizenForm = () => {
 
     return (
         <div className="citizen-page-container">
+            <LogoBackButton />
             <div className="citizen-form-wrapper">
                 <h2>{t('citizen_pass_title')}</h2>
                 <form onSubmit={handleSubmit}>

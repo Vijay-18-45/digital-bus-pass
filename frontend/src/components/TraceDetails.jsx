@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import './TraceDetails.css';
+import LogoBackButton from './LogoBackButton';
+import Header from './header';
 import { useLanguage } from '../context/LanguageContext';
 
 const TraceDetails = () => {
@@ -37,72 +39,76 @@ const TraceDetails = () => {
 
     return (
         <div className="trace-page-container">
-            <div className="trace-card">
-                <h2>{t('trace_details_title')}</h2>
-                <p className="trace-subtitle">{t('trace_details_subtitle')}</p>
+            <LogoBackButton top="120px" />
+            <Header />
+            <div className="trace-content-wrapper">
+                <div className="trace-card">
+                    <h2>{t('trace_details_title')}</h2>
+                    <p className="trace-subtitle">{t('trace_details_subtitle')}</p>
 
-                <form onSubmit={handleSubmit} className="trace-form">
-                    <div className="form-group">
-                        <label>{t('mobile_aadhaar_label')}</label>
-                        <input
-                            type="text"
-                            placeholder={t('enter_mobile_aadhaar_placeholder')}
-                            value={identifier}
-                            onChange={(e) => setIdentifier(e.target.value)}
-                            required
-                        />
-                    </div>
+                    <form onSubmit={handleSubmit} className="trace-form">
+                        <div className="form-group">
+                            <label>{t('mobile_aadhaar_label')}</label>
+                            <input
+                                type="text"
+                                placeholder={t('enter_mobile_aadhaar_placeholder')}
+                                value={identifier}
+                                onChange={(e) => setIdentifier(e.target.value)}
+                                required
+                            />
+                        </div>
 
-                    <div className="form-group">
-                        <label>{t('date_of_birth')}</label>
-                        <input
-                            type="date"
-                            value={dob}
-                            onChange={(e) => setDob(e.target.value)}
-                            required
-                        />
-                    </div>
+                        <div className="form-group">
+                            <label>{t('date_of_birth')}</label>
+                            <input
+                                type="date"
+                                value={dob}
+                                onChange={(e) => setDob(e.target.value)}
+                                required
+                            />
+                        </div>
 
-                    <div className="submit-container">
-                        <button type="submit" className="trace-submit-btn" disabled={loading}>
-                            {loading ? t('fetching_details_btn') : t('get_details_btn')}
-                        </button>
-                    </div>
-                </form>
+                        <div className="submit-container">
+                            <button type="submit" className="trace-submit-btn" disabled={loading}>
+                                {loading ? t('fetching_details_btn') : t('get_details_btn')}
+                            </button>
+                        </div>
+                    </form>
 
-                {error && (
-                    <div className="error-message">
-                        {error}
-                    </div>
-                )}
+                    {error && (
+                        <div className="error-message">
+                            {error}
+                        </div>
+                    )}
 
-                {result && (
-                    <div className="result-card">
-                        <h3>{t('pass_information_title')}</h3>
-                        <div className="result-grid">
-                            <div className="result-row">
-                                <span className="result-label">{t('name')}:</span>
-                                <span className="result-value">{result.name}</span>
-                            </div>
-                            <div className="result-row">
-                                <span className="result-label">{t('pass_type_label')}:</span>
-                                <span className="result-value">{result.passType}</span>
-                            </div>
-                            <div className="result-row">
-                                <span className="result-label">{t('route')}:</span>
-                                <span className="result-value">{result.source} {t('to')} {result.destination}</span>
-                            </div>
-                            <div className="result-row">
-                                <span className="result-label">{t('valid_upto_label')}:</span>
-                                <span className="result-value font-bold">{result.validUpto}</span>
-                            </div>
-                            <div className="result-row">
-                                <span className="result-label">{t('status_label')}:</span>
-                                <span className="result-value status-active">{result.status}</span>
+                    {result && (
+                        <div className="result-card">
+                            <h3>{t('pass_information_title')}</h3>
+                            <div className="result-grid">
+                                <div className="result-row">
+                                    <span className="result-label">{t('name')}:</span>
+                                    <span className="result-value">{result.name}</span>
+                                </div>
+                                <div className="result-row">
+                                    <span className="result-label">{t('pass_type_label')}:</span>
+                                    <span className="result-value">{result.passType}</span>
+                                </div>
+                                <div className="result-row">
+                                    <span className="result-label">{t('route')}:</span>
+                                    <span className="result-value">{result.source} {t('to')} {result.destination}</span>
+                                </div>
+                                <div className="result-row">
+                                    <span className="result-label">{t('valid_upto_label')}:</span>
+                                    <span className="result-value font-bold">{result.validUpto}</span>
+                                </div>
+                                <div className="result-row">
+                                    <span className="result-label">{t('status_label')}:</span>
+                                    <span className="result-value status-active">{result.status}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );

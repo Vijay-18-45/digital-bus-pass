@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import './NGOApplicationForm.css';
+import LogoBackButton from './LogoBackButton';
 import { useLanguage } from '../context/LanguageContext';
 import { API_ENDPOINTS } from '../api/config';
 
@@ -65,11 +66,11 @@ const NGOApplicationForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
-        
+
         try {
             const form = formRef.current;
             const formDataObj = new FormData(form);
-            
+
             // Required field validation
             const requiredFields = [
                 { name: 'fullName', label: 'Full Name', section: 'Personal Details' },
@@ -82,7 +83,7 @@ const NGOApplicationForm = () => {
                 { name: 'fromPlace', label: 'From Place', section: 'Route Details' },
                 { name: 'toPlace', label: 'To Place', section: 'Route Details' }
             ];
-            
+
             const missingFields = [];
             for (const field of requiredFields) {
                 const value = formDataObj.get(field.name);
@@ -90,13 +91,13 @@ const NGOApplicationForm = () => {
                     missingFields.push(`${field.label} (${field.section})`);
                 }
             }
-            
+
             if (missingFields.length > 0) {
                 alert(`Please fill in the following required fields:\n\n${missingFields.join('\n')}`);
                 setIsSubmitting(false);
                 return;
             }
-            
+
             const payload = {
                 applicationType: 'ngo_worker',
                 fullName: formDataObj.get('fullName'),
@@ -119,13 +120,13 @@ const NGOApplicationForm = () => {
                 idCardDoc: documents.idCardDoc,
                 addressProofDoc: documents.addressProofDoc
             };
-            
+
             const response = await fetch(API_ENDPOINTS.submitApplication, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            
+
             const data = await response.json();
             if (response.ok) {
                 alert(`Application submitted successfully! Your Application ID: ${data.applicationId}`);
@@ -145,6 +146,7 @@ const NGOApplicationForm = () => {
 
     return (
         <div className="ngo-page-container">
+            <LogoBackButton />
             <div className="ngo-form-wrapper">
                 <h2>{t('ngo_pass_title')}</h2>
                 <form ref={formRef} onSubmit={handleSubmit}>
