@@ -93,6 +93,27 @@ input:focus {
   border-color: var(--primary);
 }
 
+/* Validation Styling */
+input:not(:placeholder-shown):invalid,
+select:not([value=""]):invalid,
+textarea:not(:placeholder-shown):invalid {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+[data-theme="dark"] input:not(:placeholder-shown):invalid,
+[data-theme="dark"] select:not([value=""]):invalid,
+[data-theme="dark"] textarea:not(:placeholder-shown):invalid {
+  border-color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+input:not(:placeholder-shown):invalid:focus,
+select:not([value=""]):invalid:focus,
+textarea:not(:placeholder-shown):invalid:focus {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
 /* Glassmorphism Card (Kept for other components like OTP page) */
 .glass-panel {
   background: var(--card-bg);

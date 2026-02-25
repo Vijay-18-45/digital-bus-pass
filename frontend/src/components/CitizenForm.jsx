@@ -12,6 +12,7 @@ const CitizenForm = () => {
     });
     const [showCamera, setShowCamera] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [touched, setTouched] = useState({});
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -24,6 +25,16 @@ const CitizenForm = () => {
             reader.onloadend = () => setPhoto(reader.result);
             reader.readAsDataURL(file);
         }
+    };
+
+    const handleBlur = (e) => {
+        const { name } = e.target;
+        if (name) setTouched(prev => ({ ...prev, [name]: true }));
+    };
+
+    const showError = (name) => {
+        const input = document.querySelector(`[name="${name}"]`);
+        return touched[name] && input && !input.validity.valid;
     };
 
     const handleDocumentUpload = (e, docType) => {
@@ -65,10 +76,10 @@ const CitizenForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
-        
+
         const form = e.target;
         const formDataObj = new FormData(form);
-        
+
         // Validate required fields
         const missingFields = [];
         if (!formDataObj.get('fullName')?.trim()) missingFields.push('Full Name (Applicant Details)');
@@ -83,13 +94,13 @@ const CitizenForm = () => {
         if (!formDataObj.get('villageTown')?.trim()) missingFields.push('Village/Town (Address Details)');
         if (!formDataObj.get('pincode')?.trim()) missingFields.push('Pincode (Address Details)');
         if (!formDataObj.get('addressProofType')) missingFields.push('Address Proof Type (Documents)');
-        
+
         if (missingFields.length > 0) {
             alert('Please fill the following required fields:\n\n' + missingFields.join('\n'));
             setIsSubmitting(false);
             return;
         }
-        
+
         try {
             const payload = {
                 applicationType: 'citizen',
@@ -143,38 +154,45 @@ const CitizenForm = () => {
                     <div className="form-section">
                         <h3>{t('applicant_details')}</h3>
                         <div className="form-grid">
-                            <div className="form-group">
+                            <div className={`form-group ${showError('fullName') ? 'has-error' : ''}`}>
                                 <label>{t('full_name')}</label>
-                                <input type="text" name="fullName" required placeholder={t('enter_name')} />
+                                <input type="text" name="fullName" required pattern="[A-Za-z\s]+" title="Only letters and spaces allowed" onBlur={handleBlur} placeholder={t('enter_name')} />
+                                {showError('fullName') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid name (letters only).</span>}
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('fatherName') ? 'has-error' : ''}`}>
                                 <label>{t('father_guardian_name')}</label>
-                                <input type="text" name="fatherName" required placeholder={t('father_guardian_name')} />
+                                <input type="text" name="fatherName" required pattern="[A-Za-z\s]+" title="Only letters and spaces allowed" onBlur={handleBlur} placeholder={t('father_guardian_name')} />
+                                {showError('fatherName') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid name (letters only).</span>}
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('dateOfBirth') ? 'has-error' : ''}`}>
                                 <label>{t('date_of_birth')}</label>
-                                <input type="date" name="dateOfBirth" required />
+                                <input type="date" name="dateOfBirth" max={new Date().toISOString().split('T')[0]} onBlur={handleBlur} required />
+                                {showError('dateOfBirth') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please select a valid date of birth.</span>}
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('gender') ? 'has-error' : ''}`}>
                                 <label>{t('gender')}</label>
-                                <select name="gender" required defaultValue="">
+                                <select name="gender" required defaultValue="" onBlur={handleBlur}>
                                     <option value="" disabled>{t('select_gender')}</option>
                                     <option value="Male">{t('male')}</option>
                                     <option value="Female">{t('female')}</option>
                                     <option value="Other">{t('other')}</option>
                                 </select>
+                                {showError('gender') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please select a gender.</span>}
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('aadhaarNumber') ? 'has-error' : ''}`}>
                                 <label>{t('aadhar_number')} <span className="required-star">*</span></label>
-                                <input type="text" name="aadhaarNumber" maxLength="12" required placeholder={t('enter_aadhar')} />
+                                <input type="text" name="aadhaarNumber" pattern="\d{12}" title="12 digit Aadhaar number" maxLength="12" onBlur={handleBlur} required placeholder={t('enter_aadhar')} />
+                                {showError('aadhaarNumber') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Aadhaar must be exactly 12 digits.</span>}
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('mobile') ? 'has-error' : ''}`}>
                                 <label>{t('mobile_no')} <span className="required-star">*</span></label>
-                                <input type="tel" name="mobile" required placeholder={t('enter_mobile')} />
+                                <input type="tel" name="mobile" pattern="[6-9]\d{9}" title="10 digit mobile number starting with 6-9" maxLength="10" onBlur={handleBlur} required placeholder={t('enter_mobile')} />
+                                {showError('mobile') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Mobile number must be 10 digits.</span>}
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('email') ? 'has-error' : ''}`}>
                                 <label>{t('email')} <span className="required-star">*</span></label>
-                                <input type="email" name="email" required placeholder={t('email')} />
+                                <input type="email" name="email" required onBlur={handleBlur} placeholder={t('email')} />
+                                {showError('email') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid email address.</span>}
                             </div>
                         </div>
                     </div>
@@ -182,9 +200,10 @@ const CitizenForm = () => {
                     {/* ADDRESS */}
                     <div className="form-section">
                         <h3>{t('address_details')}</h3>
-                        <div className="form-group full-width">
+                        <div className={`form-group full-width ${showError('doorStreet') ? 'has-error' : ''}`}>
                             <label>{t('door_no_street')}</label>
-                            <textarea name="doorStreet" required rows="3" placeholder={t('door_no_street')}></textarea>
+                            <textarea name="doorStreet" required rows="3" onBlur={handleBlur} placeholder={t('door_no_street')}></textarea>
+                            {showError('doorStreet') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Address is required.</span>}
                         </div>
                         <div className="form-grid">
                             <div className="form-group">
@@ -195,9 +214,10 @@ const CitizenForm = () => {
                                 <label>{t('village_town')}</label>
                                 <input type="text" name="villageTown" required placeholder={t('village_town')} />
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('pincode') ? 'has-error' : ''}`}>
                                 <label>{t('pincode')}</label>
-                                <input type="number" name="pincode" required placeholder={t('pincode')} />
+                                <input type="text" name="pincode" pattern="\d{6}" title="6 digit pincode" maxLength="6" onBlur={handleBlur} required placeholder={t('pincode')} />
+                                {showError('pincode') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Pincode must be 6 digits.</span>}
                             </div>
                         </div>
                     </div>
@@ -288,7 +308,9 @@ const CitizenForm = () => {
                     </div>
 
                     <div className="form-submit-container">
-                        <button type="submit" className="submit-btn">{t('submit')}</button>
+                        <button type="submit" className="submit-btn" disabled={isSubmitting}>
+                            {isSubmitting ? 'Submitting...' : t('submit')}
+                        </button>
                     </div>
                 </form>
             </div>
