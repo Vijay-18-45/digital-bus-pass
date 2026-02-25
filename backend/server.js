@@ -197,6 +197,37 @@ app.post("/api/applications", async (req, res) => {
   try {
     const result = await createApplication(data);
     
+    // Only trigger webhook if application was successfully created
+    if (result && result.applicationId) {
+      const webhookData = {
+        applicationId: result.applicationId,
+        applicationType: data.applicationType,
+        fullName: data.fullName,
+        email: data.email,
+        mobile: data.mobileNumber || data.mobile,
+        aadharNumber: data.aadharNumber || data.aadhaarNumber,
+        dateOfBirth: data.dateOfBirth,
+        gender: data.gender,
+        fromPlace: data.fromPlace,
+        toPlace: data.toPlace,
+        via: data.via,
+        depot: data.depot,
+        institutionName: data.institutionName,
+        institutionAddress: data.institutionAddress,
+        course: data.course,
+        designation: data.designation,
+        employeeId: data.employeeId,
+        department: data.department,
+        officeAddress: data.officeAddress,
+        status: "pending",
+        submittedAt: new Date().toISOString()
+      };
+      
+      // Send to webhook after successful form submission
+      console.log('📤 Triggering webhook for successful application:', result.applicationId);
+      sendToWebhook(webhookData);
+    }
+    
     res.status(201).json({ 
       message: "Application submitted successfully", 
       applicationId: result.applicationId,
