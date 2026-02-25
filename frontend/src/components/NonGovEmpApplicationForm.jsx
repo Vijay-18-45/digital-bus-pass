@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import './NonGovEmpApplicationForm.css';
+import LogoBackButton from './LogoBackButton';
 import { useLanguage } from '../context/LanguageContext';
 import { API_ENDPOINTS } from '../api/config';
 
@@ -66,11 +67,11 @@ const NonGovEmpApplicationForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
-        
+
         try {
             const form = formRef.current;
             const formDataObj = new FormData(form);
-            
+
             // Required field validation with section info
             const requiredFields = [
                 { name: 'fullName', label: 'Full Name', section: '1. Applicant Details' },
@@ -83,7 +84,7 @@ const NonGovEmpApplicationForm = () => {
                 { name: 'fromPlace', label: 'From Place', section: '3. Route Details' },
                 { name: 'toPlace', label: 'To Place', section: '3. Route Details' }
             ];
-            
+
             const missingFields = [];
             for (const field of requiredFields) {
                 const value = formDataObj.get(field.name);
@@ -91,13 +92,13 @@ const NonGovEmpApplicationForm = () => {
                     missingFields.push(`${field.label} (${field.section})`);
                 }
             }
-            
+
             if (missingFields.length > 0) {
                 alert(`Please fill in the following required fields:\n\n${missingFields.join('\n')}`);
                 setIsSubmitting(false);
                 return;
             }
-            
+
             const payload = {
                 applicationType: 'non_gov_employee',
                 fullName: formDataObj.get('fullName'),
@@ -126,13 +127,13 @@ const NonGovEmpApplicationForm = () => {
                 salaryCertificateDoc: documents.salaryCertificateDoc,
                 addressProofDoc: documents.addressProofDoc
             };
-            
+
             const response = await fetch(API_ENDPOINTS.submitApplication, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            
+
             const data = await response.json();
             if (response.ok) {
                 alert(`Application submitted successfully! Your Application ID: ${data.applicationId}`);
@@ -152,6 +153,7 @@ const NonGovEmpApplicationForm = () => {
 
     return (
         <div className="non-gov-emp-page-container">
+            <LogoBackButton />
             <div className="non-gov-emp-form-wrapper">
                 <h2>{t('non_gov_emp_pass_title')}</h2>
                 <h4>(RTC – PRIVATE EMPLOYEE BUS PASS)</h4>
