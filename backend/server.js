@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import cors from "cors";
 import dotenv from "dotenv";
 import pool, { testConnection, initializeDatabase, createApplication, getApplication, getAllApplications, updateApplicationStatus } from "./db_normalized.js";
+import { adminRouter, initializeAdmin } from "./adminRoutes.js";
 
 dotenv.config();
 
@@ -11,6 +12,8 @@ app.use(express.json({ limit: '10mb' })); // Increased for photo uploads
 app.use(cors());
 
 const PORT = process.env.PORT || 5000;
+
+app.use('/api/admin', adminRouter);
 
 // Create transporter
 const transporter = nodemailer.createTransport({
@@ -37,8 +40,8 @@ app.get("/", (req, res) => {
 // Health check
 app.get("/health", async (req, res) => {
   const dbConnected = await testConnection();
-  res.json({ 
-    server: "running", 
+  res.json({
+    server: "running",
     database: dbConnected ? "connected" : "disconnected",
     timestamp: new Date().toISOString()
   });
@@ -60,7 +63,7 @@ app.post("/send-email", async (req, res) => {
   try {
     // Delete any existing OTPs for this email
     await pool.query("DELETE FROM otps WHERE email = ?", [email]);
-    
+
     // Store OTP in database
     await pool.query(
       "INSERT INTO otps (email, otp, expires_at) VALUES (?, ?, ?)",
@@ -115,10 +118,10 @@ app.post("/verify-otp", async (req, res) => {
     if (rows.length > 0) {
       // Mark OTP as used
       await pool.query("UPDATE otps SET is_used = TRUE WHERE id = ?", [rows[0].id]);
-      
+
       // Update user last login
       await pool.query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE email = ?", [email]);
-      
+
       return res.json({ message: "OTP verified successfully", email });
     } else {
       return res.status(400).json({ message: "Invalid or expired OTP" });
@@ -134,7 +137,7 @@ app.post("/verify-otp", async (req, res) => {
 // Submit application (for all form types) - NORMALIZED
 app.post("/api/applications", async (req, res) => {
   const data = req.body;
-  
+
   // Debug logging
   console.log('=== RECEIVED APPLICATION DATA ===');
   console.log('applicationType:', data.applicationType);
@@ -143,22 +146,22 @@ app.post("/api/applications", async (req, res) => {
   console.log('mobile:', data.mobile);
   console.log('All data keys:', Object.keys(data));
   console.log('================================');
-  
+
   // Detailed validation with specific error messages
   const missingFields = [];
   if (!data.applicationType) missingFields.push('Application Type');
   if (!data.fullName || data.fullName.trim() === '') missingFields.push('Full Name');
   if (!data.mobileNumber && !data.mobile) missingFields.push('Mobile Number');
   if (!data.email || data.email.trim() === '') missingFields.push('Email');
-  
+
   // Aadhaar required for all except citizen (optional for citizen who may use other ID)
   const aadhaarValue = data.aadharNumber || data.aadhaarNumber;
   if (data.applicationType !== 'citizen' && (!aadhaarValue || aadhaarValue.trim() === '')) {
     missingFields.push('Aadhaar Number');
   }
-  
+
   if (missingFields.length > 0) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       message: `Required fields missing: ${missingFields.join(', ')}`,
       missingFields: missingFields
     });
@@ -166,9 +169,9 @@ app.post("/api/applications", async (req, res) => {
 
   try {
     const result = await createApplication(data);
-    
-    res.status(201).json({ 
-      message: "Application submitted successfully", 
+
+    res.status(201).json({
+      message: "Application submitted successfully",
       applicationId: result.applicationId,
       status: "pending"
     });
@@ -372,8 +375,8 @@ app.post("/api/payments", async (req, res) => {
       [paymentId, applicationId, amount, paymentMethod || 'upi']
     );
 
-    res.status(201).json({ 
-      message: "Payment initiated", 
+    res.status(201).json({
+      message: "Payment initiated",
       paymentId,
       amount
     });
@@ -411,10 +414,12 @@ app.post("/api/payments/:paymentId/complete", async (req, res) => {
 const startServer = async () => {
   // Test database connection
   const dbConnected = await testConnection();
-  
+
   if (dbConnected) {
     // Initialize database tables
     await initializeDatabase();
+    // Initialize Admin credentials
+    await initializeAdmin();
   } else {
     console.warn("⚠️ Starting server without database connection. Some features may not work.");
   }

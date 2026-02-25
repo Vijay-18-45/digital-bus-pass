@@ -12,6 +12,8 @@ import TraceDetails from "./components/TraceDetails";
 import UpdateDetails from "./components/UpdateDetails";
 import Payment from "./components/Payment";
 import MyPass from "./components/MyPass";
+import AdminLogin from "./components/AdminLogin";
+import AdminDashboard from "./components/AdminDashboard";
 
 function App() {
   return (
@@ -30,6 +32,8 @@ function App() {
       <Route path="/payment" element={<Payment mode="new" />} />
       <Route path="/renewal" element={<Payment mode="renewal" />} />
       <Route path="/my-pass" element={<MyPass />} />
+      <Route path="/admin" element={<AdminLogin />} />
+      <Route path="/admin-dashboard" element={<AdminDashboard />} />
     </Routes>
   );
 }
