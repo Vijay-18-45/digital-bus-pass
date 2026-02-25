@@ -1,20 +1,38 @@
 import React, { useState, useRef } from 'react';
 import './CitizenForm.css';
 import { useLanguage } from '../context/LanguageContext';
+import { API_ENDPOINTS } from '../api/config';
 
 const CitizenForm = () => {
     const { t } = useLanguage();
     const [photo, setPhoto] = useState(null);
+    const [documents, setDocuments] = useState({
+        idCardDoc: null,
+        addressProofDoc: null
+    });
     const [showCamera, setShowCamera] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const fileInputRef = useRef(null);
+    const formRef = useRef(null);
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => setPhoto(reader.result);
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleDocumentUpload = (e, docType) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setDocuments(prev => ({ ...prev, [docType]: reader.result }));
+            };
             reader.readAsDataURL(file);
         }
     };
@@ -44,10 +62,76 @@ const CitizenForm = () => {
         setShowCamera(false);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        alert('Application Submitted Successfully!');
-        window.close(); // Close tab on success optionally
+        setIsSubmitting(true);
+        
+        const form = e.target;
+        const formDataObj = new FormData(form);
+        
+        // Validate required fields
+        const missingFields = [];
+        if (!formDataObj.get('fullName')?.trim()) missingFields.push('Full Name (Applicant Details)');
+        if (!formDataObj.get('fatherName')?.trim()) missingFields.push('Father/Guardian Name (Applicant Details)');
+        if (!formDataObj.get('dateOfBirth')) missingFields.push('Date of Birth (Applicant Details)');
+        if (!formDataObj.get('gender')) missingFields.push('Gender (Applicant Details)');
+        if (!formDataObj.get('aadhaarNumber')?.trim()) missingFields.push('Aadhaar Number (Applicant Details)');
+        if (!formDataObj.get('mobile')?.trim()) missingFields.push('Mobile Number (Applicant Details)');
+        if (!formDataObj.get('email')?.trim()) missingFields.push('Email (Applicant Details)');
+        if (!formDataObj.get('doorStreet')?.trim()) missingFields.push('Door No/Street (Address Details)');
+        if (!formDataObj.get('mandalDistrict')?.trim()) missingFields.push('Mandal/District (Address Details)');
+        if (!formDataObj.get('villageTown')?.trim()) missingFields.push('Village/Town (Address Details)');
+        if (!formDataObj.get('pincode')?.trim()) missingFields.push('Pincode (Address Details)');
+        if (!formDataObj.get('addressProofType')) missingFields.push('Address Proof Type (Documents)');
+        
+        if (missingFields.length > 0) {
+            alert('Please fill the following required fields:\n\n' + missingFields.join('\n'));
+            setIsSubmitting(false);
+            return;
+        }
+        
+        try {
+            const payload = {
+                applicationType: 'citizen',
+                fullName: formDataObj.get('fullName'),
+                fatherName: formDataObj.get('fatherName'),
+                dateOfBirth: formDataObj.get('dateOfBirth') || null,
+                gender: formDataObj.get('gender'),
+                aadhaarNumber: formDataObj.get('aadhaarNumber'),
+                mobile: formDataObj.get('mobile'),
+                email: formDataObj.get('email'),
+                doorStreet: formDataObj.get('doorStreet'),
+                mandalDistrict: formDataObj.get('mandalDistrict'),
+                villageTown: formDataObj.get('villageTown'),
+                pincode: formDataObj.get('pincode'),
+                addressProofType: formDataObj.get('addressProofType'),
+                photo: photo,
+                idCardDoc: documents.idCardDoc,
+                addressProofDoc: documents.addressProofDoc
+            };
+
+            const response = await fetch(API_ENDPOINTS.submitApplication, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(`Application submitted successfully!\nApplication ID: ${data.applicationId}\nPlease save this ID for tracking.`);
+                form.reset();
+                setPhoto(null);
+                setDocuments({ idCardDoc: null, addressProofDoc: null });
+            } else {
+                alert(data.message || 'Failed to submit application');
+            }
+        } catch (error) {
+            console.error('Submit error:', error);
+            alert('Failed to connect to server. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -61,19 +145,19 @@ const CitizenForm = () => {
                         <div className="form-grid">
                             <div className="form-group">
                                 <label>{t('full_name')}</label>
-                                <input type="text" required placeholder={t('enter_name')} />
+                                <input type="text" name="fullName" required placeholder={t('enter_name')} />
                             </div>
                             <div className="form-group">
                                 <label>{t('father_guardian_name')}</label>
-                                <input type="text" required placeholder={t('father_guardian_name')} />
+                                <input type="text" name="fatherName" required placeholder={t('father_guardian_name')} />
                             </div>
                             <div className="form-group">
                                 <label>{t('date_of_birth')}</label>
-                                <input type="date" required />
+                                <input type="date" name="dateOfBirth" required />
                             </div>
                             <div className="form-group">
                                 <label>{t('gender')}</label>
-                                <select required defaultValue="">
+                                <select name="gender" required defaultValue="">
                                     <option value="" disabled>{t('select_gender')}</option>
                                     <option value="Male">{t('male')}</option>
                                     <option value="Female">{t('female')}</option>
@@ -81,16 +165,16 @@ const CitizenForm = () => {
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label>{t('aadhar_number')}</label>
-                                <input type="text" maxLength="12" required placeholder={t('enter_aadhar')} />
+                                <label>{t('aadhar_number')} <span className="required-star">*</span></label>
+                                <input type="text" name="aadhaarNumber" maxLength="12" required placeholder={t('enter_aadhar')} />
                             </div>
                             <div className="form-group">
-                                <label>{t('mobile_no')}</label>
-                                <input type="tel" required placeholder={t('enter_mobile')} />
+                                <label>{t('mobile_no')} <span className="required-star">*</span></label>
+                                <input type="tel" name="mobile" required placeholder={t('enter_mobile')} />
                             </div>
                             <div className="form-group">
-                                <label>{t('email')}</label>
-                                <input type="email" required placeholder={t('email')} />
+                                <label>{t('email')} <span className="required-star">*</span></label>
+                                <input type="email" name="email" required placeholder={t('email')} />
                             </div>
                         </div>
                     </div>
@@ -100,20 +184,20 @@ const CitizenForm = () => {
                         <h3>{t('address_details')}</h3>
                         <div className="form-group full-width">
                             <label>{t('door_no_street')}</label>
-                            <textarea required rows="3" placeholder={t('door_no_street')}></textarea>
+                            <textarea name="doorStreet" required rows="3" placeholder={t('door_no_street')}></textarea>
                         </div>
                         <div className="form-grid">
                             <div className="form-group">
                                 <label>{t('mandal_district')}</label>
-                                <input type="text" required placeholder={t('mandal_district')} />
+                                <input type="text" name="mandalDistrict" required placeholder={t('mandal_district')} />
                             </div>
                             <div className="form-group">
                                 <label>{t('village_town')}</label>
-                                <input type="text" required placeholder={t('village_town')} />
+                                <input type="text" name="villageTown" required placeholder={t('village_town')} />
                             </div>
                             <div className="form-group">
                                 <label>{t('pincode')}</label>
-                                <input type="number" required placeholder={t('pincode')} />
+                                <input type="number" name="pincode" required placeholder={t('pincode')} />
                             </div>
                         </div>
                     </div>
@@ -124,7 +208,7 @@ const CitizenForm = () => {
                         <div className="form-grid">
                             <div className="form-group">
                                 <label>{t('address_proof_type')}</label>
-                                <select required defaultValue="">
+                                <select name="addressProofType" required defaultValue="">
                                     <option value="" disabled>{t('select_proof')}</option>
                                     <option value="Voter ID Card">{t('voter_id_card')}</option>
                                     <option value="Driving Licence">{t('driving_licence')}</option>
@@ -132,12 +216,12 @@ const CitizenForm = () => {
                                 </select>
                             </div>
                             <div className="form-group file-upload">
-                                <label>{t('upload_address_proof')}</label>
-                                <input type="file" required />
+                                <label>{t('upload_address_proof')} <span className="required-star">*</span></label>
+                                <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'addressProofDoc')} />
                             </div>
                             <div className="form-group file-upload">
-                                <label>{t('upload_aadhar_proof')}</label>
-                                <input type="file" required />
+                                <label>{t('upload_aadhar_proof')} <span className="required-star">*</span></label>
+                                <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'idCardDoc')} />
                             </div>
                             <div className="form-group photo-upload-container" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
                                 <label style={{ marginBottom: '15px' }}>{t('applicant_photo')}</label>

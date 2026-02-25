@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import './aboveSSCForm.css';
 import { useLanguage } from '../context/LanguageContext';
+import { API_ENDPOINTS } from '../api/config';
 
 const AboveSSCForm = () => {
     const { t } = useLanguage();
@@ -9,6 +10,11 @@ const AboveSSCForm = () => {
         mobile: '', email: '', sscBoard: 'AP Board', sscYear: '', sscHtno: '',
         college: '', course: '', door: '', village: '', mandal: '', pincode: '',
         from: '', via: '', to: '', depot: '', isEmployeeChild: false
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [documents, setDocuments] = useState({
+        idCardDoc: null,
+        addressProofDoc: null
     });
 
     const [photo, setPhoto] = useState(null);
@@ -30,6 +36,17 @@ const AboveSSCForm = () => {
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => setPhoto(reader.result);
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleDocumentUpload = (e, docType) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setDocuments(prev => ({ ...prev, [docType]: reader.result }));
+            };
             reader.readAsDataURL(file);
         }
     };
@@ -59,10 +76,83 @@ const AboveSSCForm = () => {
         setShowCamera(false);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Submission:', { ...formData, photo });
-        alert('Application submitted successfully!');
+        setIsSubmitting(true);
+        
+        try {
+            // Validate required fields
+            const missingFields = [];
+            if (!formData.name?.trim()) missingFields.push('Full Name (Personal Details)');
+            if (!formData.aadhaar?.trim()) missingFields.push('Aadhaar Number (Proofs)');
+            if (!formData.mobile?.trim()) missingFields.push('Mobile Number (Proofs)');
+            if (!formData.email?.trim()) missingFields.push('Email (Proofs)');
+            if (!formData.gender) missingFields.push('Gender (Personal Details)');
+            if (!formData.from?.trim()) missingFields.push('From Place (Route Details)');
+            if (!formData.to?.trim()) missingFields.push('To Place (Route Details)');
+            
+            if (missingFields.length > 0) {
+                alert('Please fill in the following required fields:\\n\\n' + missingFields.join('\\n'));
+                setIsSubmitting(false);
+                return;
+            }
+            
+            const payload = {
+                applicationType: 'student_above_ssc',
+                fullName: formData.name,
+                fatherName: formData.fatherName,
+                gender: formData.gender,
+                dateOfBirth: formData.dob || null,
+                aadhaarNumber: formData.aadhaar,
+                mobile: formData.mobile,
+                email: formData.email,
+                doorStreet: formData.door,
+                villageTown: formData.village,
+                mandalDistrict: formData.mandal,
+                pincode: formData.pincode,
+                fromPlace: formData.from,
+                toPlace: formData.to,
+                via: formData.via,
+                depot: formData.depot,
+                institutionName: formData.college,
+                courseYear: formData.course,
+                sscBoard: formData.sscBoard,
+                sscYear: formData.sscYear,
+                sscHtno: formData.sscHtno,
+                isEmployeeChild: formData.isEmployeeChild,
+                photo: photo,
+                idCardDoc: documents.idCardDoc,
+                addressProofDoc: documents.addressProofDoc
+            };
+
+            const response = await fetch(API_ENDPOINTS.submitApplication, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(`Application submitted successfully!\nApplication ID: ${data.applicationId}\nPlease save this ID for tracking.`);
+                // Reset form
+                setFormData({
+                    name: '', fatherName: '', dob: '', aadhaar: '', gender: '',
+                    mobile: '', email: '', sscBoard: 'AP Board', sscYear: '', sscHtno: '',
+                    college: '', course: '', door: '', village: '', mandal: '', pincode: '',
+                    from: '', via: '', to: '', depot: '', isEmployeeChild: false
+                });
+                setPhoto(null);
+                setDocuments({ idCardDoc: null, addressProofDoc: null });
+            } else {
+                alert(data.message || 'Failed to submit application');
+            }
+        } catch (error) {
+            console.error('Submit error:', error);
+            alert('Failed to connect to server. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -131,8 +221,8 @@ const AboveSSCForm = () => {
                         <h3 className="section-header">{t('proofs')}</h3>
                         <div className="form-grid-2x2">
                             <div className="form-group">
-                                <label>{t('aadhar_number')}</label>
-                                <input type="text" name="aadhaar" value={formData.aadhaar} onChange={handleChange} placeholder={t('enter_aadhar')} />
+                                <label>{t('aadhar_number')} <span className="required-star">*</span></label>
+                                <input type="text" name="aadhaar" value={formData.aadhaar} onChange={handleChange} required maxLength="12" placeholder={t('enter_aadhar')} />
                             </div>
                             <div className="form-group">
                                 <label>{t('mobile_no')} <span className="required-star">*</span></label>
@@ -140,6 +230,10 @@ const AboveSSCForm = () => {
                                     <span style={{ padding: '10px', border: '1px solid #ddd', background: '#eee', borderRadius: '4px' }}>+91</span>
                                     <input type="tel" name="mobile" value={formData.mobile} onChange={handleChange} required placeholder={t('enter_mobile')} style={{ flex: 1 }} />
                                 </div>
+                            </div>
+                            <div className="form-group">
+                                <label>{t('email')} <span className="required-star">*</span></label>
+                                <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder={t('email')} />
                             </div>
                         </div>
                     </div>
@@ -206,16 +300,16 @@ const AboveSSCForm = () => {
                         <h3 className="section-header">{t('route_details')}</h3>
                         <div className="form-grid-2x2">
                             <div className="form-group">
-                                <label>{t('from_place')}</label>
-                                <input type="text" name="from" value={formData.from} onChange={handleChange} placeholder={t('starting_point')} />
+                                <label>{t('from_place')} <span className="required-star">*</span></label>
+                                <input type="text" name="from" value={formData.from} onChange={handleChange} required placeholder={t('starting_point')} />
                             </div>
                             <div className="form-group">
                                 <label>{t('via')}</label>
                                 <input type="text" name="via" value={formData.via} onChange={handleChange} placeholder={t('via')} />
                             </div>
                             <div className="form-group">
-                                <label>{t('to_place')}</label>
-                                <input type="text" name="to" value={formData.to} onChange={handleChange} placeholder={t('to_place')} />
+                                <label>{t('to_place')} <span className="required-star">*</span></label>
+                                <input type="text" name="to" value={formData.to} onChange={handleChange} required placeholder={t('to_place')} />
                             </div>
                             <div className="form-group">
                                 <label>{t('depot')}</label>
@@ -225,7 +319,9 @@ const AboveSSCForm = () => {
                     </div>
 
                     <div className="form-footer">
-                        <button type="submit" className="submit-btn">{t('submit')}</button>
+                        <button type="submit" className="submit-btn" disabled={isSubmitting}>
+                            {isSubmitting ? 'Submitting...' : t('submit')}
+                        </button>
                     </div>
                 </form>
             </div>

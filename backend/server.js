@@ -2,15 +2,16 @@ import express from "express";
 import nodemailer from "nodemailer";
 import cors from "cors";
 import dotenv from "dotenv";
+import pool, { testConnection, initializeDatabase, createApplication, getApplication, getAllApplications, updateApplicationStatus } from "./db_normalized.js";
 
 dotenv.config();
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increased for photo uploads
 app.use(cors());
 
-const PORT = 5000;
-const otpStore = {};
+const PORT = process.env.PORT || 5000;
+
 // Create transporter
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -20,45 +21,407 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// Generate unique IDs
+const generateApplicationId = () => "APP" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 4).toUpperCase();
+const generatePassNumber = () => "APPTD-" + Math.floor(100000 + Math.random() * 900000);
+const generateTicketNumber = () => "TK" + Math.floor(10000000 + Math.random() * 90000000);
+const generatePaymentId = () => "PAY" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 6).toUpperCase();
+
+// ==================== ROUTES ====================
+
 // Test route
 app.get("/", (req, res) => {
-  res.send("Server running...");
+  res.json({ status: "ok", message: "APSRTC Bus Pass API Server Running" });
 });
 
-// Send Email Route
+// Health check
+app.get("/health", async (req, res) => {
+  const dbConnected = await testConnection();
+  res.json({ 
+    server: "running", 
+    database: dbConnected ? "connected" : "disconnected",
+    timestamp: new Date().toISOString()
+  });
+});
+
+// ==================== OTP ROUTES ====================
+
+// Send OTP Email
 app.post("/send-email", async (req, res) => {
   const { email } = req.body;
 
-  const otp = Math.floor(100000 + Math.random() * 900000);
-  otpStore[email] = otp; // store OTP with email as key
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
   try {
+    // Delete any existing OTPs for this email
+    await pool.query("DELETE FROM otps WHERE email = ?", [email]);
+    
+    // Store OTP in database
+    await pool.query(
+      "INSERT INTO otps (email, otp, expires_at) VALUES (?, ?, ?)",
+      [email, otp, expiresAt]
+    );
+
+    // Send email
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
-      subject: "Your OTP Code",
-      text: `Your OTP is: ${otp}`
+      subject: "APSRTC Bus Pass - Your OTP Code",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
+          <h2 style="color: #e31e24;">APSRTC Digital Bus Pass</h2>
+          <p>Your One-Time Password (OTP) for verification is:</p>
+          <h1 style="color: #333; letter-spacing: 5px; font-size: 32px;">${otp}</h1>
+          <p style="color: #666;">This OTP is valid for 10 minutes.</p>
+          <hr style="border: 1px solid #eee;">
+          <p style="font-size: 12px; color: #999;">If you didn't request this OTP, please ignore this email.</p>
+        </div>
+      `
     });
 
-    res.json({ message: "Email sent successfully", otp });
+    // Create or update user
+    await pool.query(
+      "INSERT INTO users (email) VALUES (?) ON DUPLICATE KEY UPDATE last_login = CURRENT_TIMESTAMP",
+      [email]
+    );
+
+    res.json({ message: "OTP sent successfully" });
 
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Email sending failed" });
+    console.error("Send OTP Error:", error);
+    res.status(500).json({ message: "Failed to send OTP" });
   }
 });
-app.post("/verify-otp", (req, res) => {
+
+// Verify OTP
+app.post("/verify-otp", async (req, res) => {
   const { email, otp } = req.body;
 
-  if (otpStore[email] && otpStore[email] == otp) {
-    delete otpStore[email]; // remove after success
-    return res.json({ message: "OTP verified successfully" });
-  } else {
-    return res.status(400).json({ message: "Invalid OTP" });
+  if (!email || !otp) {
+    return res.status(400).json({ message: "Email and OTP are required" });
+  }
+
+  try {
+    const [rows] = await pool.query(
+      "SELECT * FROM otps WHERE email = ? AND otp = ? AND expires_at > NOW() AND is_used = FALSE",
+      [email, otp]
+    );
+
+    if (rows.length > 0) {
+      // Mark OTP as used
+      await pool.query("UPDATE otps SET is_used = TRUE WHERE id = ?", [rows[0].id]);
+      
+      // Update user last login
+      await pool.query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE email = ?", [email]);
+      
+      return res.json({ message: "OTP verified successfully", email });
+    } else {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+  } catch (error) {
+    console.error("Verify OTP Error:", error);
+    res.status(500).json({ message: "Verification failed" });
   }
 });
-console.log("EMAIL:", process.env.EMAIL_USER);
-console.log("PASS:", process.env.EMAIL_PASS);
 
-app.listen(PORT, () => {
-  console.log(`Server is runnig on http://localhost:${PORT}`);
+// ==================== APPLICATION ROUTES ====================
+
+// Submit application (for all form types) - NORMALIZED
+app.post("/api/applications", async (req, res) => {
+  const data = req.body;
+  
+  // Debug logging
+  console.log('=== RECEIVED APPLICATION DATA ===');
+  console.log('applicationType:', data.applicationType);
+  console.log('fullName:', data.fullName);
+  console.log('mobileNumber:', data.mobileNumber);
+  console.log('mobile:', data.mobile);
+  console.log('All data keys:', Object.keys(data));
+  console.log('================================');
+  
+  // Detailed validation with specific error messages
+  const missingFields = [];
+  if (!data.applicationType) missingFields.push('Application Type');
+  if (!data.fullName || data.fullName.trim() === '') missingFields.push('Full Name');
+  if (!data.mobileNumber && !data.mobile) missingFields.push('Mobile Number');
+  if (!data.email || data.email.trim() === '') missingFields.push('Email');
+  
+  // Aadhaar required for all except citizen (optional for citizen who may use other ID)
+  const aadhaarValue = data.aadharNumber || data.aadhaarNumber;
+  if (data.applicationType !== 'citizen' && (!aadhaarValue || aadhaarValue.trim() === '')) {
+    missingFields.push('Aadhaar Number');
+  }
+  
+  if (missingFields.length > 0) {
+    return res.status(400).json({ 
+      message: `Required fields missing: ${missingFields.join(', ')}`,
+      missingFields: missingFields
+    });
+  }
+
+  try {
+    const result = await createApplication(data);
+    
+    res.status(201).json({ 
+      message: "Application submitted successfully", 
+      applicationId: result.applicationId,
+      status: "pending"
+    });
+  } catch (error) {
+    console.error("Submit Application Error:", error);
+    res.status(500).json({ message: "Failed to submit application", error: error.message });
+  }
 });
+
+// Get application by ID - NORMALIZED (joins with type-specific table)
+app.get("/api/applications/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const application = await getApplication(id);
+
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    res.json(application);
+  } catch (error) {
+    console.error("Get Application Error:", error);
+    res.status(500).json({ message: "Failed to fetch application" });
+  }
+});
+
+// Get applications by email or mobile (for tracing)
+app.post("/api/applications/trace", async (req, res) => {
+  const { identifier, dateOfBirth } = req.body;
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT application_id, application_type, full_name, status, from_place, to_place, created_at 
+       FROM applications 
+       WHERE (mobile = ? OR aadhar_number = ? OR email = ?) AND date_of_birth = ?`,
+      [identifier, identifier, identifier, dateOfBirth]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "No applications found" });
+    }
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Trace Application Error:", error);
+    res.status(500).json({ message: "Failed to trace applications" });
+  }
+});
+
+// Update application details
+app.put("/api/applications/:id", async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+
+  // Build dynamic update query
+  const allowedFields = ['full_name', 'mobile', 'email', 'from_place', 'to_place', 'via', 'depot'];
+  const updateFields = [];
+  const values = [];
+
+  for (const [key, value] of Object.entries(updates)) {
+    const dbField = key.replace(/([A-Z])/g, '_$1').toLowerCase(); // camelCase to snake_case
+    if (allowedFields.includes(dbField)) {
+      updateFields.push(`${dbField} = ?`);
+      values.push(value);
+    }
+  }
+
+  if (updateFields.length === 0) {
+    return res.status(400).json({ message: "No valid fields to update" });
+  }
+
+  values.push(id);
+
+  try {
+    const [result] = await pool.query(
+      `UPDATE applications SET ${updateFields.join(', ')} WHERE application_id = ?`,
+      values
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    res.json({ message: "Application updated successfully" });
+  } catch (error) {
+    console.error("Update Application Error:", error);
+    res.status(500).json({ message: "Failed to update application" });
+  }
+});
+
+// ==================== PASS ROUTES ====================
+
+// Create pass (after payment)
+app.post("/api/passes", async (req, res) => {
+  const { applicationId, planMonths, amount, isRenewal } = req.body;
+
+  try {
+    // Get application details
+    const [apps] = await pool.query(
+      "SELECT * FROM applications WHERE application_id = ?",
+      [applicationId]
+    );
+
+    if (apps.length === 0) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    const app = apps[0];
+    const passNumber = generatePassNumber();
+    const ticketNumber = generateTicketNumber();
+    const issueDate = new Date();
+    const expiryDate = new Date(issueDate);
+    expiryDate.setMonth(expiryDate.getMonth() + planMonths);
+
+    await pool.query(
+      `INSERT INTO passes (
+        pass_number, ticket_number, application_id,
+        holder_name, institution_name, from_place, to_place, photo,
+        plan_months, amount, issue_date, expiry_date, is_renewal
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        passNumber, ticketNumber, applicationId,
+        app.full_name, app.institution_name, app.from_place, app.to_place, app.photo,
+        planMonths, amount, issueDate, expiryDate, isRenewal || false
+      ]
+    );
+
+    // Update application status
+    await pool.query(
+      "UPDATE applications SET status = 'completed' WHERE application_id = ?",
+      [applicationId]
+    );
+
+    res.status(201).json({
+      message: "Pass created successfully",
+      passNumber,
+      ticketNumber,
+      issueDate: issueDate.toISOString(),
+      expiryDate: expiryDate.toISOString()
+    });
+  } catch (error) {
+    console.error("Create Pass Error:", error);
+    res.status(500).json({ message: "Failed to create pass" });
+  }
+});
+
+// Get pass by pass number
+app.get("/api/passes/:passNumber", async (req, res) => {
+  const { passNumber } = req.params;
+
+  try {
+    const [rows] = await pool.query(
+      "SELECT * FROM passes WHERE pass_number = ?",
+      [passNumber]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Pass not found" });
+    }
+
+    res.json(rows[0]);
+  } catch (error) {
+    console.error("Get Pass Error:", error);
+    res.status(500).json({ message: "Failed to fetch pass" });
+  }
+});
+
+// Get all passes for a user (by email)
+app.get("/api/passes/user/:email", async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT p.* FROM passes p 
+       JOIN applications a ON p.application_id = a.application_id 
+       WHERE a.email = ? 
+       ORDER BY p.created_at DESC`,
+      [email]
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Get User Passes Error:", error);
+    res.status(500).json({ message: "Failed to fetch passes" });
+  }
+});
+
+// ==================== PAYMENT ROUTES ====================
+
+// Create payment
+app.post("/api/payments", async (req, res) => {
+  const { applicationId, amount, paymentMethod } = req.body;
+
+  const paymentId = generatePaymentId();
+
+  try {
+    await pool.query(
+      `INSERT INTO payments (payment_id, application_id, amount, payment_method, payment_status)
+       VALUES (?, ?, ?, ?, 'pending')`,
+      [paymentId, applicationId, amount, paymentMethod || 'upi']
+    );
+
+    res.status(201).json({ 
+      message: "Payment initiated", 
+      paymentId,
+      amount
+    });
+  } catch (error) {
+    console.error("Create Payment Error:", error);
+    res.status(500).json({ message: "Failed to initiate payment" });
+  }
+});
+
+// Complete payment (mock - in real app, this would be a webhook from payment gateway)
+app.post("/api/payments/:paymentId/complete", async (req, res) => {
+  const { paymentId } = req.params;
+  const { transactionId, status } = req.body;
+
+  try {
+    const [result] = await pool.query(
+      `UPDATE payments SET payment_status = ?, transaction_id = ?, completed_at = CURRENT_TIMESTAMP 
+       WHERE payment_id = ?`,
+      [status || 'success', transactionId, paymentId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Payment not found" });
+    }
+
+    res.json({ message: "Payment completed", paymentId });
+  } catch (error) {
+    console.error("Complete Payment Error:", error);
+    res.status(500).json({ message: "Failed to complete payment" });
+  }
+});
+
+// ==================== SERVER START ====================
+
+const startServer = async () => {
+  // Test database connection
+  const dbConnected = await testConnection();
+  
+  if (dbConnected) {
+    // Initialize database tables
+    await initializeDatabase();
+  } else {
+    console.warn("⚠️ Starting server without database connection. Some features may not work.");
+  }
+
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+  });
+};
+
+startServer();

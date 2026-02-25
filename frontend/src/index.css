@@ -130,3 +130,10 @@ input:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* Required field indicator */
+.required-star {
+  color: #e31e24;
+  margin-left: 3px;
+  font-weight: bold;
+}
