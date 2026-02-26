@@ -20,7 +20,7 @@ const sendToWebhook = async (data) => {
       },
       body: JSON.stringify(data),
     });
-    
+
     if (response.ok) {
       console.log('✅ Data sent to n8n webhook successfully');
       return true;
@@ -76,18 +76,50 @@ app.get("/health", async (req, res) => {
 
 // ==================== OTP ROUTES ====================
 
-// Send OTP Email
-app.post("/send-email", async (req, res) => {
+// Login User (No OTP for existing users)
+app.post("/login", async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
     return res.status(400).json({ message: "Email is required" });
   }
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  try {
+    const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
+    if (rows.length > 0) {
+      // Update last login
+      await pool.query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE email = ?", [email]);
+      return res.json({ message: "Login successful", email });
+    } else {
+      return res.status(404).json({ message: "User not found. Please sign up." });
+    }
+  } catch (error) {
+    console.error("Login Error:", error);
+    res.status(500).json({ message: "Server error during login" });
+  }
+});
+
+// Send OTP Email (Only for Signup now, but keeping action param logic if needed)
+app.post("/send-email", async (req, res) => {
+  const { email, action } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
 
   try {
+    const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
+    const userExists = rows.length > 0;
+
+    if (action === 'login' && !userExists) {
+      return res.status(404).json({ message: "User not found. Please sign up." });
+    } else if (action === 'signup' && userExists) {
+      return res.status(400).json({ message: "User already exists. Please log in." });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
     // Delete any existing OTPs for this email
     await pool.query("DELETE FROM otps WHERE email = ?", [email]);
 
@@ -114,23 +146,17 @@ app.post("/send-email", async (req, res) => {
       `
     });
 
-    // Create or update user
-    await pool.query(
-      "INSERT INTO users (email) VALUES (?) ON DUPLICATE KEY UPDATE last_login = CURRENT_TIMESTAMP",
-      [email]
-    );
-
     res.json({ message: "OTP sent successfully" });
 
   } catch (error) {
     console.error("Send OTP Error:", error);
-    res.status(500).json({ message: "Failed to send OTP" });
+    res.status(500).json({ message: "Failed to send OTP", error: error.message });
   }
 });
 
 // Verify OTP
 app.post("/verify-otp", async (req, res) => {
-  const { email, otp } = req.body;
+  const { email, otp, action } = req.body;
 
   if (!email || !otp) {
     return res.status(400).json({ message: "Email and OTP are required" });
@@ -146,8 +172,13 @@ app.post("/verify-otp", async (req, res) => {
       // Mark OTP as used
       await pool.query("UPDATE otps SET is_used = TRUE WHERE id = ?", [rows[0].id]);
 
-      // Update user last login
-      await pool.query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE email = ?", [email]);
+      if (action === 'signup') {
+        // Create user
+        await pool.query("INSERT INTO users (email) VALUES (?)", [email]);
+      } else {
+        // Update user last login
+        await pool.query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE email = ?", [email]);
+      }
 
       return res.json({ message: "OTP verified successfully", email });
     } else {
@@ -196,9 +227,9 @@ app.post("/api/applications", async (req, res) => {
 
   try {
     const result = await createApplication(data);
-    
-    res.status(201).json({ 
-      message: "Application submitted successfully", 
+
+    res.status(201).json({
+      message: "Application submitted successfully",
       applicationId: result.applicationId,
       status: "pending"
     });

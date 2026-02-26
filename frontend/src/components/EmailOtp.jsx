@@ -9,6 +9,7 @@ function EmailOtp() {
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [role, setRole] = useState("student");
+  const [isSignup, setIsSignup] = useState(false);
   const navigate = useNavigate();
   const { t } = useLanguage();
 
@@ -22,7 +23,7 @@ function EmailOtp() {
       const response = await fetch("http://localhost:5000/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email, action: isSignup ? 'signup' : 'login' })
       });
 
       const data = await response.json();
@@ -49,7 +50,7 @@ function EmailOtp() {
     const res = await fetch("http://localhost:5000/verify-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, otp })
+      body: JSON.stringify({ email, otp, action: isSignup ? 'signup' : 'login' })
     });
 
     const data = await res.json();
@@ -57,6 +58,32 @@ function EmailOtp() {
       navigate("/home");
     } else {
       alert(data.message || t('otp_verify_failed_alert'));
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!email) {
+      alert(t('please_enter_email_alert') || "Please enter valid email address");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:5000/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        navigate("/home");
+      } else {
+        alert(data.message || "User not found. Please sign up.");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert(t('server_error_alert') || "Server error. Please try again later.");
     }
   };
 
@@ -91,7 +118,7 @@ function EmailOtp() {
 
             {/* Right Side (Login Form) */}
             <div className="login-right-pane">
-              <h2 className="login-title">Log in</h2>
+              <h2 className="login-title">{isSignup ? "Sign Up" : "Log in"}</h2>
 
               <div className="role-toggle-container">
                 <button
@@ -126,7 +153,7 @@ function EmailOtp() {
                   </div>
                 </div>
 
-                {otpSent && (
+                {isSignup && otpSent && (
                   <div className="input-group" style={{ marginTop: '15px' }}>
                     <label>Enter OTP</label>
                     <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
@@ -145,12 +172,14 @@ function EmailOtp() {
                   </div>
                 )}
 
-                <button className="submit-btn" onClick={!otpSent ? handleSendOtp : handleVerify} style={{ marginTop: '20px' }}>
-                  {!otpSent ? "Send OTP" : "Verify OTP"}
+                <button className="submit-btn" onClick={isSignup ? (!otpSent ? handleSendOtp : handleVerify) : handleLogin} style={{ marginTop: '20px' }}>
+                  {isSignup ? (!otpSent ? "Send OTP" : "Verify OTP") : "Log in"}
                 </button>
 
-                <div className="login-problems-link">
-                  <a href="#">Problems logging in?</a>
+                <div className="login-problems-link" style={{ textAlign: "center", marginTop: "15px" }}>
+                  <a href="#" onClick={(e) => { e.preventDefault(); setIsSignup(!isSignup); setOtpSent(false); setOtp(""); setEmail(""); }}>
+                    {isSignup ? "Already have an account? Log in" : "Don't have an account? Sign up"}
+                  </a>
                 </div>
               </div>
             </div>

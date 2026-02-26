@@ -1,3 +1,7 @@
+* {
+  box-sizing: border-box;
+}
+
 :root {
   --bg-color: #ffffff;
   --card-bg: #ffffff;

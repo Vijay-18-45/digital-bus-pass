@@ -76,7 +76,8 @@
 }
 
 .mypass-card-wrapper {
-    width: 420px;
+    max-width: 420px;
+    width: 100%;
     animation: slideUp 0.4s ease-out;
 }
 

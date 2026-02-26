@@ -293,3 +293,18 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 768px) {
+  .form-grid-2x2 {
+    grid-template-columns: 1fr;
+  }
+  .form-card {
+    border-radius: 0;
+  }
+  .registration-content {
+    padding: 15px;
+  }
+  .form-title-bar {
+    padding: 15px;
+  }
+}

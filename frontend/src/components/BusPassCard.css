@@ -1,5 +1,6 @@
 .pass-container {
-  width: 420px;
+  max-width: 420px;
+  width: 100%;
   margin: 30px auto;
   border: 2px solid var(--hint-border);
   background: var(--hint-bg);
