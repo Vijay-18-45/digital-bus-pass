@@ -391,6 +391,12 @@
     margin-top: 8px;
 }
 
+@media (max-width: 600px) {
+    .plan-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media print {
 
     .payment-btn,

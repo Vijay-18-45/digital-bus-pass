@@ -7,33 +7,6 @@ import { adminRouter, initializeAdmin } from "./adminRoutes.js";
 
 dotenv.config();
 
-// n8n Webhook URL (Production)
-const N8N_WEBHOOK_URL = "https://arise09876567.app.n8n.cloud/webhook/b9ba466d-cadb-46a2-b131-1b42208211dd";
-
-// Function to send data to n8n webhook
-const sendToWebhook = async (data) => {
-  try {
-    const response = await fetch(N8N_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    
-    if (response.ok) {
-      console.log('✅ Data sent to n8n webhook successfully');
-      return true;
-    } else {
-      console.error('❌ Webhook response error:', response.status, response.statusText);
-      return false;
-    }
-  } catch (error) {
-    console.error('❌ Failed to send data to n8n webhook:', error.message);
-    return false;
-  }
-};
-
 const app = express();
 app.use(express.json({ limit: '10mb' })); // Increased for photo uploads
 app.use(cors());
@@ -196,46 +169,14 @@ app.post("/api/applications", async (req, res) => {
 
   try {
     const result = await createApplication(data);
-    
-    // Only trigger webhook if application was successfully created
-    if (result && result.applicationId) {
-      const webhookData = {
-        applicationId: result.applicationId,
-        applicationType: data.applicationType,
-        fullName: data.fullName,
-        email: data.email,
-        mobile: data.mobileNumber || data.mobile,
-        aadharNumber: data.aadharNumber || data.aadhaarNumber,
-        dateOfBirth: data.dateOfBirth,
-        gender: data.gender,
-        fromPlace: data.fromPlace,
-        toPlace: data.toPlace,
-        via: data.via,
-        depot: data.depot,
-        institutionName: data.institutionName,
-        institutionAddress: data.institutionAddress,
-        course: data.course,
-        designation: data.designation,
-        employeeId: data.employeeId,
-        department: data.department,
-        officeAddress: data.officeAddress,
-        status: "pending",
-        submittedAt: new Date().toISOString()
-      };
-      
-      // Send to webhook after successful form submission
-      console.log('📤 Triggering webhook for successful application:', result.applicationId);
-      sendToWebhook(webhookData);
-    }
-    
-    res.status(201).json({ 
-      message: "Application submitted successfully", 
+
+    res.status(201).json({
+      message: "Application submitted successfully",
       applicationId: result.applicationId,
       status: "pending"
     });
   } catch (error) {
     console.error("Submit Application Error:", error);
-    // Webhook NOT triggered on error - form submission failed
     res.status(500).json({ message: "Failed to submit application", error: error.message });
   }
 });
