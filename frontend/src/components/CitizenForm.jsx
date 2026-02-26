@@ -115,6 +115,7 @@ const CitizenForm = () => {
                 mandalDistrict: formDataObj.get('mandalDistrict'),
                 villageTown: formDataObj.get('villageTown'),
                 pincode: formDataObj.get('pincode'),
+                depot: formDataObj.get('depot'),
                 addressProofType: formDataObj.get('addressProofType'),
                 photo: photo,
                 idCardDoc: documents.idCardDoc,
@@ -233,6 +234,7 @@ const CitizenForm = () => {
                                     <option value="Voter ID Card">{t('voter_id_card')}</option>
                                     <option value="Driving Licence">{t('driving_licence')}</option>
                                     <option value="Passport">{t('passport')}</option>
+                                    <option value="PAN Card">{t('pan_card')}</option>
                                 </select>
                             </div>
                             <div className="form-group file-upload">
@@ -294,6 +296,10 @@ const CitizenForm = () => {
                                     <option value="Monthly">{t('monthly')}</option>
                                     <option value="Quarterly">{t('quarterly')}</option>
                                 </select>
+                            </div>
+                            <div className="form-group">
+                                <label>{t('depot')} <span className="required-star">*</span></label>
+                                <input type="text" name="depot" required placeholder={t('depot')} />
                             </div>
                         </div>
                     </div>

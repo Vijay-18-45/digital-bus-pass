@@ -129,6 +129,7 @@ const NonGovEmpApplicationForm = () => {
                 passDuration: formDataObj.get('passDuration'),
                 fromPlace: formDataObj.get('fromPlace'),
                 toPlace: formDataObj.get('toPlace'),
+                depot: formDataObj.get('depot'),
                 boardingPoint: formDataObj.get('boardingPoint'),
                 residentialAddress: formDataObj.get('residentialAddress'),
                 officeAddress: formDataObj.get('officeAddress'),
@@ -260,8 +261,8 @@ const NonGovEmpApplicationForm = () => {
                                 <label>10. {t('monthly_income')}</label>
                                 <select name="monthlyIncome" required defaultValue="">
                                     <option value="" disabled>{t('select_validity')}</option>
-                                    <option value="Below ₹15,000">{t('below_ssc')} ₹15,000</option>
-                                    <option value="Above ₹50,000">{t('above_ssc')} ₹50,000</option>
+                                    <option value="Below ₹15,000">Below ₹15,000</option>
+                                    <option value="Above ₹50,000">Above ₹50,000</option>
                                 </select>
                             </div>
                         </div>
@@ -299,6 +300,15 @@ const NonGovEmpApplicationForm = () => {
                                 <label>{t('to_place')} <span className="required-star">*</span></label>
                                 <input type="text" name="toPlace" required onBlur={handleBlur} placeholder={t('to_place')} />
                                 {showError('toPlace') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Destination is required.</span>}
+                            </div>
+                            <div className="form-group">
+                                <label>{t('depot')} <span className="required-star">*</span></label>
+                                <select name="depot" required defaultValue="">
+                                    <option value="" disabled>Select {t('depot')}</option>
+                                    <option value="Depot 1">Depot 1</option>
+                                    <option value="Depot 2">Depot 2</option>
+                                    <option value="Depot 3">Depot 3</option>
+                                </select>
                             </div>
                             <div className="form-group full-width">
                                 <label>14. {t('boarding_point')}</label>
