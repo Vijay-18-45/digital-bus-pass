@@ -125,6 +125,7 @@ const JournalistForm = () => {
                 passType: formDataObj.get('passType'),
                 fromPlace: formDataObj.get('fromPlace'),
                 toPlace: formDataObj.get('toPlace'),
+                depot: formDataObj.get('depot'),
                 validity: formDataObj.get('validity'),
                 photo: photo,
                 idCardDoc: documents.idCardDoc,
@@ -318,6 +319,10 @@ const JournalistForm = () => {
                                     <option value="Quarterly">{t('quarterly')}</option>
                                     <option value="Half-Yearly">{t('half_yearly')}</option>
                                 </select>
+                            </div>
+                            <div className="form-group">
+                                <label>{t('depot')} <span className="required-star">*</span></label>
+                                <input type="text" name="depot" required placeholder={t('depot')} />
                             </div>
                         </div>
                     </div>

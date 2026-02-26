@@ -144,7 +144,7 @@ const Home = () => {
             <h3>{t('renewal_pass')}</h3>
             <p>{t('below_ssc')} & {t('above_ssc')}</p>
           </div>
-          <div className="action-card" onClick={() => window.open('/Know_More.pdf', '_blank')}>
+          <div className="action-card" onClick={() => window.open('/Know_More.pdf', '_self')}>
             <div className="icon"><img src="/dow1.svg" alt="Know More" /></div>
             <h3>{t('know_more')}</h3>
             <p>{t('view_document')}</p>

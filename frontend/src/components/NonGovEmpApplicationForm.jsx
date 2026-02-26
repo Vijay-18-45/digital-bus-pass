@@ -130,7 +130,6 @@ const NonGovEmpApplicationForm = () => {
                 fromPlace: formDataObj.get('fromPlace'),
                 toPlace: formDataObj.get('toPlace'),
                 depot: formDataObj.get('depot'),
-                boardingPoint: formDataObj.get('boardingPoint'),
                 residentialAddress: formDataObj.get('residentialAddress'),
                 officeAddress: formDataObj.get('officeAddress'),
                 photo: photo,
@@ -310,10 +309,6 @@ const NonGovEmpApplicationForm = () => {
                                     <option value="Depot 3">Depot 3</option>
                                 </select>
                             </div>
-                            <div className="form-group full-width">
-                                <label>14. {t('boarding_point')}</label>
-                                <input type="text" name="boardingPoint" required />
-                            </div>
                         </div>
                     </div>
 
@@ -322,11 +317,11 @@ const NonGovEmpApplicationForm = () => {
                         <h3>4. {t('address_details')}</h3>
                         <div className="form-grid">
                             <div className="form-group full-width">
-                                <label>15. {t('res_address')}</label>
+                                <label>14. {t('res_address')}</label>
                                 <textarea name="residentialAddress" required rows="3" placeholder={t('door_no_street')}></textarea>
                             </div>
                             <div className="form-group full-width">
-                                <label>16. {t('office_work_address')}</label>
+                                <label>15. {t('office_work_address')}</label>
                                 <textarea name="officeAddress" required rows="3" placeholder={t('office_work_address')}></textarea>
                             </div>
                         </div>

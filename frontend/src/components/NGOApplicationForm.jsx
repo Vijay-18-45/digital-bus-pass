@@ -120,11 +120,15 @@ const NGOApplicationForm = () => {
                 ngoName: formDataObj.get('ngoName'),
                 ngoRegistrationNumber: formDataObj.get('ngoRegistrationNumber'),
                 designation: formDataObj.get('designation'),
+                appointmentDate: formDataObj.get('appointmentDate'),
+                retirementDate: formDataObj.get('retirementDate'),
+                payScale: formDataObj.get('payScale'),
                 residentialAddress: formDataObj.get('residentialAddress'),
                 ngoAddress: formDataObj.get('ngoAddress'),
                 passType: formDataObj.get('passType'),
                 fromPlace: formDataObj.get('fromPlace'),
                 toPlace: formDataObj.get('toPlace'),
+                depot: formDataObj.get('depot'),
                 validity: formDataObj.get('validity'),
                 photo: photo,
                 idCardDoc: documents.idCardDoc,
@@ -220,6 +224,18 @@ const NGOApplicationForm = () => {
                             <div className="form-group">
                                 <label>{t('applicant_designation_ngo')}</label>
                                 <input type="text" name="designation" required />
+                            </div>
+                            <div className="form-group">
+                                <label>{t('appointment_date')}</label>
+                                <input type="date" name="appointmentDate" required />
+                            </div>
+                            <div className="form-group">
+                                <label>{t('retirement_date')}</label>
+                                <input type="date" name="retirementDate" required />
+                            </div>
+                            <div className="form-group">
+                                <label>{t('pay_scale')}</label>
+                                <input type="text" name="payScale" required />
                             </div>
                         </div>
                     </div>
@@ -317,6 +333,10 @@ const NGOApplicationForm = () => {
                                     <option value="Quarterly">{t('quarterly')}</option>
                                     <option value="Half-Yearly">{t('half_yearly')}</option>
                                 </select>
+                            </div>
+                            <div className="form-group">
+                                <label>{t('depot')} <span className="required-star">*</span></label>
+                                <input type="text" name="depot" required placeholder={t('depot')} />
                             </div>
                         </div>
                     </div>
