@@ -13,6 +13,7 @@ const JournalistForm = () => {
     });
     const [showCamera, setShowCamera] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [touched, setTouched] = useState({});
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -25,6 +26,16 @@ const JournalistForm = () => {
             reader.onloadend = () => setPhoto(reader.result);
             reader.readAsDataURL(file);
         }
+    };
+
+    const handleBlur = (e) => {
+        const { name } = e.target;
+        if (name) setTouched(prev => ({ ...prev, [name]: true }));
+    };
+
+    const showError = (name) => {
+        const input = document.querySelector(`[name="${name}"]`);
+        return touched[name] && input && !input.validity.valid;
     };
 
     const handleDocumentUpload = (e, docType) => {
@@ -115,6 +126,7 @@ const JournalistForm = () => {
                 passType: formDataObj.get('passType'),
                 fromPlace: formDataObj.get('fromPlace'),
                 toPlace: formDataObj.get('toPlace'),
+                depot: formDataObj.get('depot'),
                 validity: formDataObj.get('validity'),
                 photo: photo,
                 idCardDoc: documents.idCardDoc,
@@ -154,38 +166,45 @@ const JournalistForm = () => {
                     <div className="form-section">
                         <h3>{t('applicant_details')}</h3>
                         <div className="form-grid">
-                            <div className="form-group">
-                                <label>{t('full_name')}</label>
-                                <input type="text" name="fullName" required placeholder={t('enter_name')} />
+                            <div className={`form-group ${showError('fullName') ? 'has-error' : ''}`}>
+                                <label>{t('full_name')} <span className="required-star">*</span></label>
+                                <input type="text" name="fullName" required pattern="[A-Za-z\s]+" title="Only letters and spaces allowed" onBlur={handleBlur} placeholder={t('enter_name')} />
+                                {showError('fullName') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid name (letters only).</span>}
                             </div>
-                            <div className="form-group">
-                                <label>{t('father_guardian_name')}</label>
-                                <input type="text" name="fatherName" required placeholder={t('father_guardian_name')} />
+                            <div className={`form-group ${showError('fatherName') ? 'has-error' : ''}`}>
+                                <label>{t('father_guardian_name')} <span className="required-star">*</span></label>
+                                <input type="text" name="fatherName" required pattern="[A-Za-z\s]+" title="Only letters and spaces allowed" onBlur={handleBlur} placeholder={t('father_guardian_name')} />
+                                {showError('fatherName') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid name (letters only).</span>}
                             </div>
-                            <div className="form-group">
-                                <label>{t('date_of_birth')}</label>
-                                <input type="date" name="dateOfBirth" required />
+                            <div className={`form-group ${showError('dateOfBirth') ? 'has-error' : ''}`}>
+                                <label>{t('date_of_birth')} <span className="required-star">*</span></label>
+                                <input type="date" name="dateOfBirth" max={new Date().toISOString().split('T')[0]} onBlur={handleBlur} required />
+                                {showError('dateOfBirth') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please select a valid date of birth.</span>}
                             </div>
-                            <div className="form-group">
-                                <label>{t('gender')}</label>
-                                <select name="gender" required defaultValue="">
+                            <div className={`form-group ${showError('gender') ? 'has-error' : ''}`}>
+                                <label>{t('gender')} <span className="required-star">*</span></label>
+                                <select name="gender" required defaultValue="" onBlur={handleBlur}>
                                     <option value="" disabled>{t('select_gender')}</option>
                                     <option value="Male">{t('male')}</option>
                                     <option value="Female">{t('female')}</option>
                                     <option value="Other">{t('other')}</option>
                                 </select>
+                                {showError('gender') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please select a gender.</span>}
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('aadharNumber') ? 'has-error' : ''}`}>
                                 <label>{t('aadhar_number')} <span className="required-star">*</span></label>
-                                <input type="text" name="aadharNumber" maxLength="12" required placeholder={t('enter_aadhar')} />
+                                <input type="text" name="aadharNumber" pattern="\d{12}" title="12 digit Aadhaar number" maxLength="12" onBlur={handleBlur} required placeholder={t('enter_aadhar')} />
+                                {showError('aadharNumber') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Aadhaar must be exactly 12 digits.</span>}
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('mobileNumber') ? 'has-error' : ''}`}>
                                 <label>{t('mobile_no')} <span className="required-star">*</span></label>
-                                <input type="tel" name="mobileNumber" required placeholder={t('enter_mobile')} />
+                                <input type="tel" name="mobileNumber" pattern="[6-9]\d{9}" title="10 digit mobile number starting with 6-9" maxLength="10" onBlur={handleBlur} required placeholder={t('enter_mobile')} />
+                                {showError('mobileNumber') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Mobile number must be 10 digits.</span>}
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('email') ? 'has-error' : ''}`}>
                                 <label>{t('email')} <span className="required-star">*</span></label>
-                                <input type="email" name="email" required placeholder={t('email')} />
+                                <input type="email" name="email" required onBlur={handleBlur} placeholder={t('email')} />
+                                {showError('email') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid email address.</span>}
                             </div>
                         </div>
                     </div>
@@ -227,7 +246,7 @@ const JournalistForm = () => {
                             </div>
                             <div className="form-group">
                                 <label>{t('pincode')}</label>
-                                <input type="number" name="pincode" required placeholder={t('pincode')} />
+                                <input type="text" name="pincode" pattern="\d{6}" title="6 digit pincode" maxLength="6" required placeholder={t('pincode')} />
                             </div>
                         </div>
                     </div>
@@ -284,13 +303,15 @@ const JournalistForm = () => {
                                     <option value="City">{t('city')}</option>
                                 </select>
                             </div>
-                            <div className="form-group">
-                                <label>{t('from_place')}</label>
-                                <input type="text" name="fromPlace" required placeholder={t('starting_point')} />
+                            <div className={`form-group ${showError('fromPlace') ? 'has-error' : ''}`}>
+                                <label>{t('from_place')} <span className="required-star">*</span></label>
+                                <input type="text" name="fromPlace" required onBlur={handleBlur} placeholder={t('starting_point')} />
+                                {showError('fromPlace') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Starting point is required.</span>}
                             </div>
-                            <div className="form-group">
-                                <label>{t('to_place')}</label>
-                                <input type="text" name="toPlace" required placeholder={t('to_place')} />
+                            <div className={`form-group ${showError('toPlace') ? 'has-error' : ''}`}>
+                                <label>{t('to_place')} <span className="required-star">*</span></label>
+                                <input type="text" name="toPlace" required onBlur={handleBlur} placeholder={t('to_place')} />
+                                {showError('toPlace') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Destination is required.</span>}
                             </div>
                             <div className="form-group">
                                 <label>{t('validity')}</label>
@@ -300,6 +321,10 @@ const JournalistForm = () => {
                                     <option value="Quarterly">{t('quarterly')}</option>
                                     <option value="Half-Yearly">{t('half_yearly')}</option>
                                 </select>
+                            </div>
+                            <div className="form-group">
+                                <label>{t('depot')} <span className="required-star">*</span></label>
+                                <input type="text" name="depot" required placeholder={t('depot')} />
                             </div>
                         </div>
                     </div>

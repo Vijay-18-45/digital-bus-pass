@@ -12,6 +12,7 @@ const AboveSSCForm = () => {
         college: '', course: '', door: '', village: '', mandal: '', pincode: '',
         from: '', via: '', to: '', depot: '', isEmployeeChild: false
     });
+    const [touched, setTouched] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [documents, setDocuments] = useState({
         idCardDoc: null,
@@ -30,6 +31,15 @@ const AboveSSCForm = () => {
             ...formData,
             [name]: type === 'checkbox' ? checked : value
         });
+    };
+
+    const handleBlur = (e) => {
+        const { name } = e.target;
+        setTouched({ ...touched, [name]: true });
+    };
+
+    const showError = (name) => {
+        return touched[name] && document.querySelector(`[name="${name}"]`) && !document.querySelector(`[name="${name}"]`).validity.valid;
     };
 
     const handleFileUpload = (e) => {
@@ -169,26 +179,30 @@ const AboveSSCForm = () => {
                         <div className="details-section">
                             <h3 className="section-header">{t('applicant_details')}</h3>
                             <div className="form-grid-2x2">
-                                <div className="form-group">
+                                <div className={`form-group ${showError('name') ? 'has-error' : ''}`}>
                                     <label>{t('full_name')} <span className="required-star">*</span></label>
-                                    <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder={t('enter_name')} />
+                                    <input type="text" name="name" value={formData.name} onChange={handleChange} onBlur={handleBlur} required pattern="[A-Za-z\s]+" title="Only letters and spaces allowed" placeholder={t('enter_name')} />
+                                    {showError('name') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid name (letters only).</span>}
                                 </div>
-                                <div className="form-group">
+                                <div className={`form-group ${showError('fatherName') ? 'has-error' : ''}`}>
                                     <label>{t('father_guardian_name')} <span className="required-star">*</span></label>
-                                    <input type="text" name="fatherName" value={formData.fatherName} onChange={handleChange} required placeholder={t('father_guardian_name')} />
+                                    <input type="text" name="fatherName" value={formData.fatherName} onChange={handleChange} onBlur={handleBlur} required pattern="[A-Za-z\s]+" title="Only letters and spaces allowed" placeholder={t('father_guardian_name')} />
+                                    {showError('fatherName') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid name (letters only).</span>}
                                 </div>
-                                <div className="form-group">
+                                <div className={`form-group ${showError('gender') ? 'has-error' : ''}`}>
                                     <label>{t('gender')} <span className="required-star">*</span></label>
-                                    <select name="gender" value={formData.gender} onChange={handleChange} required>
+                                    <select name="gender" value={formData.gender} onChange={handleChange} onBlur={handleBlur} required>
                                         <option value="">{t('select_gender')}</option>
                                         <option value="Male">{t('male')}</option>
                                         <option value="Female">{t('female')}</option>
                                         <option value="Other">{t('other')}</option>
                                     </select>
+                                    {showError('gender') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please select a gender.</span>}
                                 </div>
-                                <div className="form-group">
+                                <div className={`form-group ${showError('dob') ? 'has-error' : ''}`}>
                                     <label>{t('date_of_birth')} <span className="required-star">*</span></label>
-                                    <input type="date" name="dob" value={formData.dob} onChange={handleChange} required />
+                                    <input type="date" name="dob" value={formData.dob} onChange={handleChange} onBlur={handleBlur} max={new Date().toISOString().split('T')[0]} required />
+                                    {showError('dob') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please select a valid date of birth.</span>}
                                 </div>
                             </div>
                             <div className="checkbox-group">
@@ -222,20 +236,23 @@ const AboveSSCForm = () => {
                     <div className="proofs-section">
                         <h3 className="section-header">{t('proofs')}</h3>
                         <div className="form-grid-2x2">
-                            <div className="form-group">
+                            <div className={`form-group ${showError('aadhaar') ? 'has-error' : ''}`}>
                                 <label>{t('aadhar_number')} <span className="required-star">*</span></label>
-                                <input type="text" name="aadhaar" value={formData.aadhaar} onChange={handleChange} required maxLength="12" placeholder={t('enter_aadhar')} />
+                                <input type="text" name="aadhaar" value={formData.aadhaar} onChange={handleChange} onBlur={handleBlur} required pattern="\d{12}" title="12 digit Aadhaar number" maxLength="12" placeholder={t('enter_aadhar')} />
+                                {showError('aadhaar') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Aadhaar must be exactly 12 digits.</span>}
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('mobile') ? 'has-error' : ''}`}>
                                 <label>{t('mobile_no')} <span className="required-star">*</span></label>
                                 <div style={{ display: 'flex', gap: '5px' }}>
                                     <span style={{ padding: '10px', border: '1px solid #ddd', background: '#eee', borderRadius: '4px' }}>+91</span>
-                                    <input type="tel" name="mobile" value={formData.mobile} onChange={handleChange} required placeholder={t('enter_mobile')} style={{ flex: 1 }} />
+                                    <input type="tel" name="mobile" value={formData.mobile} onChange={handleChange} onBlur={handleBlur} required pattern="[6-9]\d{9}" title="10 digit mobile number starting with 6-9" maxLength="10" placeholder={t('enter_mobile')} style={{ flex: 1 }} />
                                 </div>
+                                {showError('mobile') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Mobile number must be 10 digits.</span>}
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('email') ? 'has-error' : ''}`}>
                                 <label>{t('email')} <span className="required-star">*</span></label>
-                                <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder={t('email')} />
+                                <input type="email" name="email" value={formData.email} onChange={handleChange} onBlur={handleBlur} required placeholder={t('email')} />
+                                {showError('email') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid email address.</span>}
                             </div>
                         </div>
                     </div>
@@ -251,9 +268,10 @@ const AboveSSCForm = () => {
                                     <option>{t('ssc_icse')}</option>
                                 </select>
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('sscYear') ? 'has-error' : ''}`}>
                                 <label>{t('ssc_year_of_pass')}</label>
-                                <input type="number" name="sscYear" value={formData.sscYear} onChange={handleChange} placeholder={t('year_of_passing')} />
+                                <input type="text" name="sscYear" value={formData.sscYear} onChange={handleChange} onBlur={handleBlur} pattern="\d{4}" title="4 digit year" maxLength="4" placeholder={t('year_of_passing')} />
+                                {showError('sscYear') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Year must be exactly 4 digits.</span>}
                             </div>
                             <div className="form-group">
                                 <label>{t('ssc_hall_ticket_no')}</label>
@@ -291,9 +309,10 @@ const AboveSSCForm = () => {
                                 <label>{t('mandal_district')}</label>
                                 <input type="text" name="mandal" value={formData.mandal} onChange={handleChange} placeholder={t('mandal_district')} />
                             </div>
-                            <div className="form-group">
+                            <div className={`form-group ${showError('pincode') ? 'has-error' : ''}`}>
                                 <label>{t('pincode')}</label>
-                                <input type="number" name="pincode" value={formData.pincode} onChange={handleChange} placeholder={t('pincode')} />
+                                <input type="text" name="pincode" value={formData.pincode} onChange={handleChange} onBlur={handleBlur} pattern="\d{6}" title="6 digit pincode" maxLength="6" placeholder={t('pincode')} />
+                                {showError('pincode') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Pincode must be 6 digits.</span>}
                             </div>
                         </div>
                     </div>
@@ -301,13 +320,15 @@ const AboveSSCForm = () => {
                     <div className="route-section">
                         <h3 className="section-header">{t('route_details')}</h3>
                         <div className="form-grid-2x2">
-                            <div className="form-group">
+                            <div className={`form-group ${showError('from') ? 'has-error' : ''}`}>
                                 <label>{t('from_place')} <span className="required-star">*</span></label>
-                                <input type="text" name="from" value={formData.from} onChange={handleChange} required placeholder={t('starting_point')} />
+                                <input type="text" name="from" value={formData.from} onChange={handleChange} onBlur={handleBlur} required placeholder={t('starting_point')} />
+                                {showError('from') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Starting point is required.</span>}
                             </div>
                             <div className="form-group">
                                 <label>{t('to_place')} <span className="required-star">*</span></label>
-                                <input type="text" name="to" value={formData.to} onChange={handleChange} required placeholder={t('to_place')} />
+                                <input type="text" name="to" value={formData.to} onChange={handleChange} onBlur={handleBlur} required placeholder={t('to_place')} />
+                                {showError('to') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Destination is required.</span>}
                             </div>
                             <div className="form-group">
                                 <label>{t('depot')}</label>
