@@ -1,0 +1,17 @@
+{
+  "name": "APSRTC Bus Pass",
+  "short_name": "APSRTC Pass",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#e31e24",
+  "description": "APSRTC Digital Bus Pass System",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
