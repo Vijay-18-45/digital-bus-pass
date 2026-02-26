@@ -142,7 +142,7 @@ const GovEmpApplicationForm = () => {
                 passDuration: formDataObj.get('passDuration'),
                 fromPlace: formDataObj.get('fromPlace'),
                 toPlace: formDataObj.get('toPlace'),
-                boardingPoint: formDataObj.get('boardingPoint'),
+                depotDetails: formDataObj.get('depotDetails'),
                 residentialAddress: formDataObj.get('residentialAddress'),
                 officeAddress: formDataObj.get('officeAddress'),
                 photo: photo,
@@ -302,8 +302,8 @@ const GovEmpApplicationForm = () => {
                                 <input type="text" name="toPlace" required placeholder={t('to_place')} />
                             </div>
                             <div className="form-group full-width">
-                                <label>17. {t('boarding_point')}</label>
-                                <input type="text" name="boardingPoint" required />
+                                <label>17. Depot Details</label>
+                                <input type="text" name="depotDetails" placeholder="Enter Depot Name/Location" />
                             </div>
                         </div>
                     </div>
@@ -328,7 +328,7 @@ const GovEmpApplicationForm = () => {
                         <h3>5. {t('upload_verification')}</h3>
                         <div className="form-grid">
                             <div className="form-group file-upload">
-                                <label>{t('gov_emp_pass_title')} ID Card Upload <span className="required-star">*</span></label>
+                                <label>Employee ID Card Upload <span className="required-star">*</span></label>
                                 <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'idCardDoc')} />
                             </div>
                             <div className="form-group file-upload">

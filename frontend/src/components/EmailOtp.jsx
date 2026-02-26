@@ -12,6 +12,12 @@ function EmailOtp() {
   const navigate = useNavigate();
   const { t } = useLanguage();
 
+  // Admin login state
+  const [adminId, setAdminId] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [depoName, setDepoName] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
+
   const handleSendOtp = async () => {
     if (!email) {
       alert(t('please_enter_email_alert') || "Please enter valid email address");
@@ -57,6 +63,42 @@ function EmailOtp() {
       navigate("/home");
     } else {
       alert(data.message || t('otp_verify_failed_alert'));
+    }
+  };
+
+  // Admin login handler
+  const handleAdminLogin = async () => {
+    if (!adminId || !adminPassword || !depoName) {
+      alert("Please fill all admin login fields");
+      return;
+    }
+
+    setAdminLoading(true);
+    try {
+      const response = await fetch("http://localhost:5000/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          admin_id: adminId,
+          admin_password: adminPassword,
+          depo_name: depoName
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        localStorage.setItem('adminDepo', data.admin.depo_name);
+        localStorage.setItem('adminId', data.admin.admin_id);
+        navigate('/admin-dashboard');
+      } else {
+        alert(data.message || "Invalid credentials. Please try again.");
+      }
+    } catch (error) {
+      console.error("Admin login error:", error);
+      alert("Server error. Could not connect to the backend.");
+    } finally {
+      setAdminLoading(false);
     }
   };
 
@@ -111,45 +153,113 @@ function EmailOtp() {
               </div>
 
               <div className="form-container">
-                {!otpSent ? (
-                  <div className="input-group">
-                    <label>Email Address</label>
-                    <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                        <polyline points="22,6 12,13 2,6"></polyline>
-                      </svg>
-                      <input
-                        type="email"
-                        placeholder="example@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%' }}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="input-group">
-                    <label>Enter OTP</label>
-                    <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                      </svg>
-                      <input
-                        type="text"
-                        placeholder="123456"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
-                        style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%' }}
-                      />
-                    </div>
-                  </div>
-                )}
+                {role === 'student' ? (
+                  // Student login form
+                  <>
+                    {!otpSent ? (
+                      <div className="input-group">
+                        <label>Email Address</label>
+                        <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                            <polyline points="22,6 12,13 2,6"></polyline>
+                          </svg>
+                          <input
+                            type="email"
+                            placeholder="example@email.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%' }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="input-group">
+                        <label>Enter OTP</label>
+                        <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                          </svg>
+                          <input
+                            type="text"
+                            placeholder="123456"
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                            style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%' }}
+                          />
+                        </div>
+                      </div>
+                    )}
 
-                <button className="submit-btn" onClick={!otpSent ? handleSendOtp : handleVerify}>
-                  {!otpSent ? "Send OTP" : "Verify OTP"}
-                </button>
+                    <button className="submit-btn" onClick={!otpSent ? handleSendOtp : handleVerify}>
+                      {!otpSent ? "Send OTP" : "Verify OTP"}
+                    </button>
+                  </>
+                ) : (
+                  // Admin login form
+                  <>
+                    <div className="input-group">
+                      <label>Admin ID</label>
+                      <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <input
+                          type="text"
+                          placeholder="Enter Admin ID"
+                          value={adminId}
+                          onChange={(e) => setAdminId(e.target.value)}
+                          style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="input-group">
+                      <label>Password</label>
+                      <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <input
+                          type="password"
+                          placeholder="Enter Password"
+                          value={adminPassword}
+                          onChange={(e) => setAdminPassword(e.target.value)}
+                          style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="input-group">
+                      <label>Depot Name</label>
+                      <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                          <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        <input
+                          type="text"
+                          placeholder="e.g. Vijayawada, Guntur, Vizag"
+                          value={depoName}
+                          onChange={(e) => setDepoName(e.target.value)}
+                          style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%' }}
+                        />
+                      </div>
+                    </div>
+
+                    <button 
+                      className="submit-btn" 
+                      onClick={handleAdminLogin}
+                      disabled={adminLoading}
+                      style={{ opacity: adminLoading ? 0.7 : 1 }}
+                    >
+                      {adminLoading ? "Logging in..." : "Login as Admin"}
+                    </button>
+                  </>
+                )}
 
                 <div className="login-problems-link">
                   <a href="#">Problems logging in?</a>

@@ -98,6 +98,17 @@ const NGOApplicationForm = () => {
                 return;
             }
 
+            // Date validation: retirement date must be after appointment date
+            const dateOfAppointment = formDataObj.get('dateOfAppointment');
+            const dateOfRetirement = formDataObj.get('dateOfRetirement');
+            if (dateOfAppointment && dateOfRetirement) {
+                if (new Date(dateOfRetirement) <= new Date(dateOfAppointment)) {
+                    alert('Date of Retirement must be after Date of Appointment');
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+
             const payload = {
                 applicationType: 'ngo_worker',
                 fullName: formDataObj.get('fullName'),
@@ -110,12 +121,16 @@ const NGOApplicationForm = () => {
                 ngoName: formDataObj.get('ngoName'),
                 ngoRegistrationNumber: formDataObj.get('ngoRegistrationNumber'),
                 designation: formDataObj.get('designation'),
+                dateOfAppointment: formDataObj.get('dateOfAppointment'),
+                dateOfRetirement: formDataObj.get('dateOfRetirement'),
+                scalePay: formDataObj.get('scalePay'),
                 residentialAddress: formDataObj.get('residentialAddress'),
                 ngoAddress: formDataObj.get('ngoAddress'),
                 passType: formDataObj.get('passType'),
                 fromPlace: formDataObj.get('fromPlace'),
                 toPlace: formDataObj.get('toPlace'),
                 validity: formDataObj.get('validity'),
+                depotDetails: formDataObj.get('depotDetails'),
                 photo: photo,
                 idCardDoc: documents.idCardDoc,
                 addressProofDoc: documents.addressProofDoc
@@ -204,6 +219,18 @@ const NGOApplicationForm = () => {
                             <div className="form-group">
                                 <label>{t('applicant_designation_ngo')}</label>
                                 <input type="text" name="designation" required />
+                            </div>
+                            <div className="form-group">
+                                <label>Date of Appointment <span className="required-star">*</span></label>
+                                <input type="date" name="dateOfAppointment" required />
+                            </div>
+                            <div className="form-group">
+                                <label>Date of Retirement</label>
+                                <input type="date" name="dateOfRetirement" />
+                            </div>
+                            <div className="form-group">
+                                <label>Scale Pay</label>
+                                <input type="text" name="scalePay" placeholder="Enter scale pay (e.g., 25000-50000)" />
                             </div>
                         </div>
                     </div>
@@ -299,6 +326,10 @@ const NGOApplicationForm = () => {
                                     <option value="Quarterly">{t('quarterly')}</option>
                                     <option value="Half-Yearly">{t('half_yearly')}</option>
                                 </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Depot Details</label>
+                                <input type="text" name="depotDetails" placeholder="Enter Depot Name/Location" />
                             </div>
                         </div>
                     </div>

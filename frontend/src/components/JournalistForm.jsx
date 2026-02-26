@@ -116,6 +116,7 @@ const JournalistForm = () => {
                 fromPlace: formDataObj.get('fromPlace'),
                 toPlace: formDataObj.get('toPlace'),
                 validity: formDataObj.get('validity'),
+                depotDetails: formDataObj.get('depotDetails'),
                 photo: photo,
                 idCardDoc: documents.idCardDoc,
                 addressProofDoc: documents.addressProofDoc
@@ -300,6 +301,10 @@ const JournalistForm = () => {
                                     <option value="Quarterly">{t('quarterly')}</option>
                                     <option value="Half-Yearly">{t('half_yearly')}</option>
                                 </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Depot Details</label>
+                                <input type="text" name="depotDetails" placeholder="Enter Depot Name/Location" />
                             </div>
                         </div>
                     </div>

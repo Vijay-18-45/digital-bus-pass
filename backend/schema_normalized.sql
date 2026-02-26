@@ -263,6 +263,10 @@ CREATE TABLE ngo_applications (
     ngo_registration_number VARCHAR(50),
     designation VARCHAR(100),
     experience_years INT,
+    date_of_appointment DATE,
+    date_of_retirement DATE,
+    scale_pay VARCHAR(100),
+    depot_details VARCHAR(255),
     
     -- Route
     validity VARCHAR(50),

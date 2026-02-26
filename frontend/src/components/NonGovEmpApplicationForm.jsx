@@ -119,7 +119,7 @@ const NonGovEmpApplicationForm = () => {
                 passDuration: formDataObj.get('passDuration'),
                 fromPlace: formDataObj.get('fromPlace'),
                 toPlace: formDataObj.get('toPlace'),
-                boardingPoint: formDataObj.get('boardingPoint'),
+                depotDetails: formDataObj.get('depotDetails'),
                 residentialAddress: formDataObj.get('residentialAddress'),
                 officeAddress: formDataObj.get('officeAddress'),
                 photo: photo,
@@ -244,8 +244,10 @@ const NonGovEmpApplicationForm = () => {
                                 <label>10. {t('monthly_income')}</label>
                                 <select name="monthlyIncome" required defaultValue="">
                                     <option value="" disabled>{t('select_validity')}</option>
-                                    <option value="Below ₹15,000">{t('below_ssc')} ₹15,000</option>
-                                    <option value="Above ₹50,000">{t('above_ssc')} ₹50,000</option>
+                                    <option value="Below ₹15,000">Below ₹15,000</option>
+                                    <option value="₹15,000 - ₹25,000">₹15,000 - ₹25,000</option>
+                                    <option value="₹25,000 - ₹50,000">₹25,000 - ₹50,000</option>
+                                    <option value="Above ₹50,000">Above ₹50,000</option>
                                 </select>
                             </div>
                         </div>
@@ -282,9 +284,9 @@ const NonGovEmpApplicationForm = () => {
                                 <label>{t('to_place')}</label>
                                 <input type="text" name="toPlace" required placeholder={t('to_place')} />
                             </div>
-                            <div className="form-group full-width">
-                                <label>14. {t('boarding_point')}</label>
-                                <input type="text" name="boardingPoint" required />
+                            <div className="form-group">
+                                <label>14. Depot Details</label>
+                                <input type="text" name="depotDetails" placeholder="Enter Depot Name/Location" />
                             </div>
                         </div>
                     </div>
@@ -294,11 +296,11 @@ const NonGovEmpApplicationForm = () => {
                         <h3>4. {t('address_details')}</h3>
                         <div className="form-grid">
                             <div className="form-group full-width">
-                                <label>15. {t('res_address')}</label>
+                                <label>16. {t('res_address')}</label>
                                 <textarea name="residentialAddress" required rows="3" placeholder={t('door_no_street')}></textarea>
                             </div>
                             <div className="form-group full-width">
-                                <label>16. {t('office_work_address')}</label>
+                                <label>17. {t('office_work_address')}</label>
                                 <textarea name="officeAddress" required rows="3" placeholder={t('office_work_address')}></textarea>
                             </div>
                         </div>
@@ -351,12 +353,6 @@ const NonGovEmpApplicationForm = () => {
                             <input type="checkbox" required />
                             <span>{t('non_gov_declaration_text')}</span>
                         </label>
-
-
-
-                        <div className="signature-box">
-                            <p>{t('signature_applicant')}</p>
-                        </div>
                     </div>
 
 

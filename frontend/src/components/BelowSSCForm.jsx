@@ -10,8 +10,10 @@ const BelowSSCForm = () => {
         name: '', fatherName: '', dob: '', aadhaar: '', gender: '',
         mobile: '', email: '', schoolName: '', class: '',
         door: '', village: '', mandal: '', pincode: '',
-        from: '', via: '', to: '', depot: '', isEmployeeChild: false
+        from: '', via: '', to: '', depot: '', isGovtEmployeeChild: false,
+        parentEmployeeName: '', parentPfNumber: ''
     });
+    const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [photo, setPhoto] = useState(null);
@@ -76,6 +78,12 @@ const BelowSSCForm = () => {
             if (!formData.gender) missingFields.push('Gender (Personal Details)');
             if (!formData.from?.trim()) missingFields.push('From Place (Route Details)');
             if (!formData.to?.trim()) missingFields.push('To Place (Route Details)');
+            
+            // Validate conditional fields for Government Employee Child
+            if (formData.isGovtEmployeeChild) {
+                if (!formData.parentEmployeeName?.trim()) missingFields.push('Parent/Guardian Employee Name');
+                if (!formData.parentPfNumber?.trim()) missingFields.push('PF Number');
+            }
 
             if (missingFields.length > 0) {
                 alert('Please fill in the following required fields:\\n\\n' + missingFields.join('\\n'));
@@ -102,7 +110,9 @@ const BelowSSCForm = () => {
                 depot: formData.depot,
                 schoolName: formData.schoolName,
                 classStudying: formData.class,
-                isEmployeeChild: formData.isEmployeeChild,
+                isGovtEmployeeChild: formData.isGovtEmployeeChild,
+                parentEmployeeName: formData.parentEmployeeName,
+                parentPfNumber: formData.parentPfNumber,
                 photo: photo
             };
 
@@ -120,9 +130,11 @@ const BelowSSCForm = () => {
                     name: '', fatherName: '', dob: '', aadhaar: '', gender: '',
                     mobile: '', email: '', schoolName: '', class: '',
                     door: '', village: '', mandal: '', pincode: '',
-                    from: '', via: '', to: '', depot: '', isEmployeeChild: false
+                    from: '', via: '', to: '', depot: '', isGovtEmployeeChild: false,
+                    parentEmployeeName: '', parentPfNumber: ''
                 });
                 setPhoto(null);
+                setErrors({});
             } else {
                 alert(data.message || 'Failed to submit application');
             }
@@ -170,9 +182,37 @@ const BelowSSCForm = () => {
                                 </div>
                             </div>
                             <div className="checkbox-group">
-                                <input type="checkbox" name="isEmployeeChild" checked={formData.isEmployeeChild} onChange={handleChange} />
-                                <label>{t('is_employee_child')}</label>
+                                <input type="checkbox" name="isGovtEmployeeChild" checked={formData.isGovtEmployeeChild} onChange={handleChange} />
+                                <label>{t('is_govt_employee_child') || 'Is Government Employee Child'}</label>
                             </div>
+                            {formData.isGovtEmployeeChild && (
+                                <div className="form-grid-2x2" style={{marginTop: '15px'}}>
+                                    <div className="form-group">
+                                        <label>Parent/Guardian Employee Name <span className="required-star">*</span></label>
+                                        <input 
+                                            type="text" 
+                                            name="parentEmployeeName" 
+                                            value={formData.parentEmployeeName} 
+                                            onChange={handleChange} 
+                                            placeholder="Enter employee name"
+                                            required={formData.isGovtEmployeeChild}
+                                        />
+                                        {errors.parentEmployeeName && <span className="error-message">{errors.parentEmployeeName}</span>}
+                                    </div>
+                                    <div className="form-group">
+                                        <label>PF Number <span className="required-star">*</span></label>
+                                        <input 
+                                            type="text" 
+                                            name="parentPfNumber" 
+                                            value={formData.parentPfNumber} 
+                                            onChange={handleChange} 
+                                            placeholder="Enter PF Number"
+                                            required={formData.isGovtEmployeeChild}
+                                        />
+                                        {errors.parentPfNumber && <span className="error-message">{errors.parentPfNumber}</span>}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="photo-upload-container">

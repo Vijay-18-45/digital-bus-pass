@@ -9,13 +9,16 @@ const AboveSSCForm = () => {
     const [formData, setFormData] = useState({
         name: '', fatherName: '', dob: '', aadhaar: '', gender: '',
         mobile: '', email: '', sscBoard: 'AP Board', sscYear: '', sscHtno: '',
-        college: '', course: '', door: '', village: '', mandal: '', pincode: '',
-        from: '', via: '', to: '', depot: '', isEmployeeChild: false
+        college: '', course: '', registrationNumber: '', door: '', village: '', mandal: '', pincode: '',
+        from: '', via: '', to: '', depot: '', isGovtEmployeeChild: false,
+        parentEmployeeName: '', parentPfNumber: ''
     });
+    const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [documents, setDocuments] = useState({
         idCardDoc: null,
-        addressProofDoc: null
+        addressProofDoc: null,
+        studyCertificateDoc: null
     });
 
     const [photo, setPhoto] = useState(null);
@@ -117,13 +120,17 @@ const AboveSSCForm = () => {
                 depot: formData.depot,
                 institutionName: formData.college,
                 courseYear: formData.course,
+                registrationNumber: formData.registrationNumber,
                 sscBoard: formData.sscBoard,
                 sscYear: formData.sscYear,
                 sscHtno: formData.sscHtno,
-                isEmployeeChild: formData.isEmployeeChild,
+                isGovtEmployeeChild: formData.isGovtEmployeeChild,
+                parentEmployeeName: formData.parentEmployeeName,
+                parentPfNumber: formData.parentPfNumber,
                 photo: photo,
                 idCardDoc: documents.idCardDoc,
-                addressProofDoc: documents.addressProofDoc
+                addressProofDoc: documents.addressProofDoc,
+                studyCertificateDoc: documents.studyCertificateDoc
             };
 
             const response = await fetch(API_ENDPOINTS.submitApplication, {
@@ -140,11 +147,13 @@ const AboveSSCForm = () => {
                 setFormData({
                     name: '', fatherName: '', dob: '', aadhaar: '', gender: '',
                     mobile: '', email: '', sscBoard: 'AP Board', sscYear: '', sscHtno: '',
-                    college: '', course: '', door: '', village: '', mandal: '', pincode: '',
-                    from: '', via: '', to: '', depot: '', isEmployeeChild: false
+                    college: '', course: '', registrationNumber: '', door: '', village: '', mandal: '', pincode: '',
+                    from: '', via: '', to: '', depot: '', isGovtEmployeeChild: false,
+                    parentEmployeeName: '', parentPfNumber: ''
                 });
                 setPhoto(null);
-                setDocuments({ idCardDoc: null, addressProofDoc: null });
+                setDocuments({ idCardDoc: null, addressProofDoc: null, studyCertificateDoc: null });
+                setErrors({});
             } else {
                 alert(data.message || 'Failed to submit application');
             }
@@ -192,9 +201,37 @@ const AboveSSCForm = () => {
                                 </div>
                             </div>
                             <div className="checkbox-group">
-                                <input type="checkbox" name="isEmployeeChild" checked={formData.isEmployeeChild} onChange={handleChange} />
-                                <label>{t('is_employee_child')}</label>
+                                <input type="checkbox" name="isGovtEmployeeChild" checked={formData.isGovtEmployeeChild} onChange={handleChange} />
+                                <label>{t('is_govt_employee_child') || 'Is Government Employee Child'}</label>
                             </div>
+                            {formData.isGovtEmployeeChild && (
+                                <div className="form-grid-2x2" style={{marginTop: '15px'}}>
+                                    <div className="form-group">
+                                        <label>Parent/Guardian Employee Name <span className="required-star">*</span></label>
+                                        <input 
+                                            type="text" 
+                                            name="parentEmployeeName" 
+                                            value={formData.parentEmployeeName} 
+                                            onChange={handleChange} 
+                                            placeholder="Enter employee name"
+                                            required={formData.isGovtEmployeeChild}
+                                        />
+                                        {errors.parentEmployeeName && <span className="error-message">{errors.parentEmployeeName}</span>}
+                                    </div>
+                                    <div className="form-group">
+                                        <label>PF Number <span className="required-star">*</span></label>
+                                        <input 
+                                            type="text" 
+                                            name="parentPfNumber" 
+                                            value={formData.parentPfNumber} 
+                                            onChange={handleChange} 
+                                            placeholder="Enter PF Number"
+                                            required={formData.isGovtEmployeeChild}
+                                        />
+                                        {errors.parentPfNumber && <span className="error-message">{errors.parentPfNumber}</span>}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="photo-upload-container">
@@ -237,6 +274,24 @@ const AboveSSCForm = () => {
                                 <label>{t('email')} <span className="required-star">*</span></label>
                                 <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder={t('email')} />
                             </div>
+                            <div className="form-group">
+                                <label>Study Certificate / Bonafide</label>
+                                <input 
+                                    type="file" 
+                                    accept=".pdf,.jpg,.jpeg,.png" 
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => {
+                                                setDocuments(prev => ({...prev, studyCertificateDoc: reader.result}));
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }}
+                                />
+                                {documents.studyCertificateDoc && <span style={{color: 'green', fontSize: '0.85rem'}}>✓ File uploaded</span>}
+                            </div>
                         </div>
                     </div>
 
@@ -272,6 +327,10 @@ const AboveSSCForm = () => {
                             <div className="form-group">
                                 <label>{t('course_year')}</label>
                                 <input type="text" name="course" value={formData.course} onChange={handleChange} placeholder={t('course_year_placeholder')} />
+                            </div>
+                            <div className="form-group">
+                                <label>Registration Number</label>
+                                <input type="text" name="registrationNumber" value={formData.registrationNumber} onChange={handleChange} placeholder="Enter Registration Number" />
                             </div>
                         </div>
                     </div>

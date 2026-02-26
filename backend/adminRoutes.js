@@ -69,27 +69,76 @@ adminRouter.get('/applications/:depoName', async (req, res) => {
     const { depoName } = req.params;
 
     try {
-        // Query applications that have matching depot in student_above_ssc
+        // Query all student_above_ssc applications
         const [aboveSSC] = await pool.query(`
             SELECT a.*, 
-                   s.door_street, s.village_town, s.mandal_district, s.pincode, s.via, s.depot, s.institution_name, s.course_year, s.ssc_board, s.ssc_year, s.ssc_htno, s.is_employee_child,
+                   s.door_street, s.village_town, s.mandal_district, s.pincode, s.via, s.depot, s.institution_name, s.course_year, s.registration_number, s.ssc_board, s.ssc_year, s.ssc_htno, s.is_govt_employee_child, s.parent_employee_name, s.parent_pf_number, s.study_certificate_doc,
                    'Student Above SSC' as category 
             FROM applications a
             JOIN student_above_ssc s ON a.application_id = s.application_id
-            WHERE s.depot = ?
-        `, [depoName]);
+        `);
 
-        // Query applications that have matching depot in student_below_ssc
+        // Query all student_below_ssc applications
         const [belowSSC] = await pool.query(`
             SELECT a.*, 
-                   s.door_street, s.village_town, s.mandal_district, s.pincode, s.via, s.depot, s.school_name, s.class_studying,
+                   s.door_street, s.village_town, s.mandal_district, s.pincode, s.via, s.depot, s.school_name, s.class_studying, s.is_govt_employee_child, s.parent_employee_name, s.parent_pf_number,
                    'Student Below SSC' as category 
             FROM applications a
             JOIN student_below_ssc s ON a.application_id = s.application_id
-            WHERE s.depot = ?
-        `, [depoName]);
+        `);
 
-        const allApplications = [...aboveSSC, ...belowSSC];
+        // Query all citizen applications
+        const [citizens] = await pool.query(`
+            SELECT a.*, 
+                   c.residential_address, c.via, c.occupation, c.depot_details,
+                   'Citizen' as category,
+                   COALESCE(c.depot_details, 'All Depots') as depot
+            FROM applications a
+            JOIN citizen_applications c ON a.application_id = c.application_id
+        `);
+
+        // Query all government employee applications
+        const [govEmps] = await pool.query(`
+            SELECT a.*, 
+                   g.residential_address, g.office_address, g.designation, g.gov_emp_id_pf, g.dept_ministry, g.office_name, g.employment_type, g.working_district, g.depot_details,
+                   'Government Employee' as category,
+                   COALESCE(g.depot_details, g.working_district, 'All Depots') as depot
+            FROM applications a
+            JOIN gov_employee_applications g ON a.application_id = g.application_id
+        `);
+
+        // Query all non-government employee applications
+        const [nonGovEmps] = await pool.query(`
+            SELECT a.*, 
+                   n.residential_address, n.office_address, n.designation, n.employee_id, n.company_name, n.sector_type, n.employment_type, n.office_district, n.depot_details,
+                   'Non-Government Employee' as category,
+                   COALESCE(n.depot_details, n.office_district, 'All Depots') as depot
+            FROM applications a
+            JOIN non_gov_employee_applications n ON a.application_id = n.application_id
+        `);
+
+        // Query journalist applications (no depot filter - show all to relevant admins)
+        const [journalists] = await pool.query(`
+            SELECT a.*, 
+                   j.residential_address, j.office_address, j.media_organization, j.designation, j.press_id_number, j.experience_years, j.validity, j.depot_details,
+                   'Journalist' as category,
+                   COALESCE(j.depot_details, 'All Depots') as depot
+            FROM applications a
+            JOIN journalist_applications j ON a.application_id = j.application_id
+        `);
+
+        // Query NGO applications (no depot filter - show all to relevant admins)
+        const [ngoWorkers] = await pool.query(`
+            SELECT a.*, 
+                   ng.residential_address, ng.ngo_address, ng.ngo_name, ng.ngo_registration_number, ng.designation, ng.experience_years, ng.validity, ng.depot_details,
+                   ng.date_of_appointment, ng.date_of_retirement, ng.scale_pay,
+                   'NGO Worker' as category,
+                   COALESCE(ng.depot_details, 'All Depots') as depot
+            FROM applications a
+            JOIN ngo_applications ng ON a.application_id = ng.application_id
+        `);
+
+        const allApplications = [...aboveSSC, ...belowSSC, ...citizens, ...govEmps, ...nonGovEmps, ...journalists, ...ngoWorkers];
 
         // Sort by created_at descending
         allApplications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -160,6 +209,65 @@ adminRouter.post('/applications/:applicationId/status', async (req, res) => {
         res.json({ success: true, message: `Application ${status}` });
     } catch (error) {
         console.error('Update Application Status Error:', error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
+
+// Get application statistics
+adminRouter.get('/stats/:depoName', async (req, res) => {
+    const { depoName } = req.params;
+    
+    try {
+        const [pending] = await pool.query(
+            "SELECT COUNT(*) as count FROM applications WHERE status = 'pending'"
+        );
+        const [approved] = await pool.query(
+            "SELECT COUNT(*) as count FROM applications WHERE status = 'approved'"
+        );
+        const [rejected] = await pool.query(
+            "SELECT COUNT(*) as count FROM applications WHERE status = 'rejected'"
+        );
+        const [total] = await pool.query(
+            "SELECT COUNT(*) as count FROM applications"
+        );
+        
+        res.json({
+            success: true,
+            stats: {
+                pending: pending[0].count,
+                approved: approved[0].count,
+                rejected: rejected[0].count,
+                total: total[0].count
+            }
+        });
+    } catch (error) {
+        console.error('Admin Stats Error:', error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
+
+// Get all applications (no depot filter - for super admin view)
+adminRouter.get('/all-applications', async (req, res) => {
+    try {
+        const [applications] = await pool.query(`
+            SELECT a.*, 
+                   CASE 
+                       WHEN a.application_type = 'student_above_ssc' THEN 'Student Above SSC'
+                       WHEN a.application_type = 'student_below_ssc' THEN 'Student Below SSC'
+                       WHEN a.application_type = 'citizen' THEN 'Citizen'
+                       WHEN a.application_type = 'gov_employee' THEN 'Government Employee'
+                       WHEN a.application_type = 'non_gov_employee' THEN 'Non-Government Employee'
+                       WHEN a.application_type = 'journalist' THEN 'Journalist'
+                       WHEN a.application_type = 'ngo_worker' THEN 'NGO Worker'
+                       ELSE a.application_type
+                   END as category
+            FROM applications a
+            ORDER BY a.created_at DESC
+        `);
+        
+        res.json({ success: true, applications });
+    } catch (error) {
+        console.error('Fetch All Applications Error:', error);
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 });

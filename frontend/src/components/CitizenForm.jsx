@@ -106,6 +106,11 @@ const CitizenForm = () => {
                 villageTown: formDataObj.get('villageTown'),
                 pincode: formDataObj.get('pincode'),
                 addressProofType: formDataObj.get('addressProofType'),
+                fromPlace: formDataObj.get('fromPlace'),
+                toPlace: formDataObj.get('toPlace'),
+                passType: formDataObj.get('passType'),
+                validity: formDataObj.get('validity'),
+                depotDetails: formDataObj.get('depotDetails'),
                 photo: photo,
                 idCardDoc: documents.idCardDoc,
                 addressProofDoc: documents.addressProofDoc
@@ -215,6 +220,7 @@ const CitizenForm = () => {
                                     <option value="Voter ID Card">{t('voter_id_card')}</option>
                                     <option value="Driving Licence">{t('driving_licence')}</option>
                                     <option value="Passport">{t('passport')}</option>
+                                    <option value="PAN Card">PAN Card</option>
                                 </select>
                             </div>
                             <div className="form-group file-upload">
@@ -254,7 +260,7 @@ const CitizenForm = () => {
                         <div className="form-grid">
                             <div className="form-group">
                                 <label>{t('pass_type')}</label>
-                                <select required defaultValue="">
+                                <select name="passType" required defaultValue="">
                                     <option value="" disabled>{t('select_pass')}</option>
                                     <option value="Ordinary">{t('ordinary')}</option>
                                     <option value="Metro">{t('metro')}</option>
@@ -262,20 +268,24 @@ const CitizenForm = () => {
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label>{t('from_place')}</label>
-                                <input type="text" required placeholder={t('starting_point')} />
+                                <label>{t('from_place')} <span className="required-star">*</span></label>
+                                <input type="text" name="fromPlace" required placeholder={t('starting_point')} />
                             </div>
                             <div className="form-group">
-                                <label>{t('to_place')}</label>
-                                <input type="text" required placeholder={t('to_place')} />
+                                <label>{t('to_place')} <span className="required-star">*</span></label>
+                                <input type="text" name="toPlace" required placeholder={t('to_place')} />
                             </div>
                             <div className="form-group">
                                 <label>{t('validity')}</label>
-                                <select required defaultValue="">
+                                <select name="validity" required defaultValue="">
                                     <option value="" disabled>{t('select_validity')}</option>
                                     <option value="Monthly">{t('monthly')}</option>
                                     <option value="Quarterly">{t('quarterly')}</option>
                                 </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Depot Details</label>
+                                <input type="text" name="depotDetails" placeholder="Enter Depot Name/Location" />
                             </div>
                         </div>
                     </div>

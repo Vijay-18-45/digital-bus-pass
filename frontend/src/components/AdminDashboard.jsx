@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
     const [applications, setApplications] = useState([]);
+    const [filteredApplications, setFilteredApplications] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [selectedApp, setSelectedApp] = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
 
     const depoName = localStorage.getItem('adminDepo');
     const adminId = localStorage.getItem('adminId');
@@ -14,7 +17,7 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         if (!depoName) {
-            navigate('/admin');
+            navigate('/');
             return;
         }
 
@@ -25,6 +28,13 @@ const AdminDashboard = () => {
 
                 if (response.ok && data.success) {
                     setApplications(data.applications);
+                    setFilteredApplications(data.applications);
+                    
+                    // Calculate stats from fetched applications
+                    const pending = data.applications.filter(a => a.status === 'pending').length;
+                    const approved = data.applications.filter(a => a.status === 'approved').length;
+                    const rejected = data.applications.filter(a => a.status === 'rejected').length;
+                    setStats({ pending, approved, rejected, total: data.applications.length });
                 } else {
                     setError(data.message || 'Failed to fetch applications');
                 }
@@ -39,10 +49,19 @@ const AdminDashboard = () => {
         fetchApplications();
     }, [depoName, navigate]);
 
+    // Filter applications when status filter changes
+    useEffect(() => {
+        if (statusFilter === 'all') {
+            setFilteredApplications(applications);
+        } else {
+            setFilteredApplications(applications.filter(app => app.status === statusFilter));
+        }
+    }, [statusFilter, applications]);
+
     const handleLogout = () => {
         localStorage.removeItem('adminDepo');
         localStorage.removeItem('adminId');
-        navigate('/admin');
+        navigate('/');
     };
 
     const handleUpdateStatus = async (appId, status) => {
@@ -57,7 +76,16 @@ const AdminDashboard = () => {
             });
             const data = await res.json();
             if (data.success) {
-                setApplications(prev => prev.map(a => a.application_id === appId ? { ...a, status } : a));
+                // Update applications list
+                const updatedApps = applications.map(a => a.application_id === appId ? { ...a, status } : a);
+                setApplications(updatedApps);
+                
+                // Update stats
+                const pending = updatedApps.filter(a => a.status === 'pending').length;
+                const approved = updatedApps.filter(a => a.status === 'approved').length;
+                const rejected = updatedApps.filter(a => a.status === 'rejected').length;
+                setStats({ pending, approved, rejected, total: updatedApps.length });
+                
                 setSelectedApp(null);
                 alert(`Success! User has been notified that their application is ${status}.`);
             } else {
@@ -107,10 +135,51 @@ const AdminDashboard = () => {
             {error && <div style={styles.errorBanner}>{error}</div>}
 
             <div style={styles.content}>
-                <h2 style={{ marginBottom: '20px' }}>Recent Applications from {depoName} Depot</h2>
+                {/* Stats Cards */}
+                <div style={styles.statsContainer}>
+                    <div style={{...styles.statCard, borderLeft: '4px solid #f39c12'}} onClick={() => setStatusFilter('pending')}>
+                        <div style={styles.statNumber}>{stats.pending}</div>
+                        <div style={styles.statLabel}>Pending</div>
+                    </div>
+                    <div style={{...styles.statCard, borderLeft: '4px solid #27ae60'}} onClick={() => setStatusFilter('approved')}>
+                        <div style={styles.statNumber}>{stats.approved}</div>
+                        <div style={styles.statLabel}>Approved</div>
+                    </div>
+                    <div style={{...styles.statCard, borderLeft: '4px solid #e74c3c'}} onClick={() => setStatusFilter('rejected')}>
+                        <div style={styles.statNumber}>{stats.rejected}</div>
+                        <div style={styles.statLabel}>Rejected</div>
+                    </div>
+                    <div style={{...styles.statCard, borderLeft: '4px solid #3498db'}} onClick={() => setStatusFilter('all')}>
+                        <div style={styles.statNumber}>{stats.total}</div>
+                        <div style={styles.statLabel}>Total</div>
+                    </div>
+                </div>
 
-                {applications.length === 0 ? (
-                    <div style={styles.emptyState}>No applications found for this depot.</div>
+                {/* Filter Section */}
+                <div style={styles.filterSection}>
+                    <h2 style={{ margin: 0 }}>Applications {statusFilter !== 'all' ? `(${statusFilter.toUpperCase()})` : ''}</h2>
+                    <div style={styles.filterButtons}>
+                        <button 
+                            style={statusFilter === 'all' ? styles.filterBtnActive : styles.filterBtn} 
+                            onClick={() => setStatusFilter('all')}
+                        >All</button>
+                        <button 
+                            style={statusFilter === 'pending' ? styles.filterBtnActive : styles.filterBtn} 
+                            onClick={() => setStatusFilter('pending')}
+                        >Pending</button>
+                        <button 
+                            style={statusFilter === 'approved' ? styles.filterBtnActive : styles.filterBtn} 
+                            onClick={() => setStatusFilter('approved')}
+                        >Approved</button>
+                        <button 
+                            style={statusFilter === 'rejected' ? styles.filterBtnActive : styles.filterBtn} 
+                            onClick={() => setStatusFilter('rejected')}
+                        >Rejected</button>
+                    </div>
+                </div>
+
+                {filteredApplications.length === 0 ? (
+                    <div style={styles.emptyState}>No {statusFilter !== 'all' ? statusFilter : ''} applications found.</div>
                 ) : (
                     <div style={styles.tableResponsive}>
                         <table style={styles.table}>
@@ -127,7 +196,7 @@ const AdminDashboard = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {applications.map((app) => (
+                                {filteredApplications.map((app) => (
                                     <tr key={app.application_id} style={styles.tr}>
                                         <td style={styles.td}><strong>{app.application_id}</strong></td>
                                         <td style={styles.td}>{app.full_name}</td>
@@ -195,6 +264,7 @@ const AdminDashboard = () => {
 
                             <h3 style={styles.sectionTitle}>Academic/Specific Details</h3>
                             <div style={styles.detailsGrid}>
+                                {/* Student fields */}
                                 {selectedApp.institution_name && <div><strong>Institution:</strong> {selectedApp.institution_name}</div>}
                                 {selectedApp.course_year && <div><strong>Course Year:</strong> {selectedApp.course_year}</div>}
                                 {selectedApp.school_name && <div><strong>School Name:</strong> {selectedApp.school_name}</div>}
@@ -202,10 +272,48 @@ const AdminDashboard = () => {
                                 {selectedApp.ssc_board && <div><strong>SSC Board:</strong> {selectedApp.ssc_board}</div>}
                                 {selectedApp.ssc_year && <div><strong>SSC Year:</strong> {selectedApp.ssc_year}</div>}
                                 {selectedApp.ssc_htno && <div><strong>SSC Hall Ticket:</strong> {selectedApp.ssc_htno}</div>}
+                                
+                                {/* Address fields */}
                                 {selectedApp.door_street && <div><strong>Door/Street:</strong> {selectedApp.door_street}</div>}
                                 {selectedApp.village_town && <div><strong>Village/Town:</strong> {selectedApp.village_town}</div>}
                                 {selectedApp.mandal_district && <div><strong>Mandal/District:</strong> {selectedApp.mandal_district}</div>}
                                 {selectedApp.pincode && <div><strong>Pincode:</strong> {selectedApp.pincode}</div>}
+                                {selectedApp.residential_address && <div><strong>Residential Address:</strong> {selectedApp.residential_address}</div>}
+                                
+                                {/* Citizen fields */}
+                                {selectedApp.occupation && <div><strong>Occupation:</strong> {selectedApp.occupation}</div>}
+                                {selectedApp.depot_details && <div><strong>Depot Details:</strong> {selectedApp.depot_details}</div>}
+                                
+                                {/* Student Employee Child fields */}
+                                {selectedApp.is_govt_employee_child && <div><strong>Is Govt Employee Child:</strong> Yes</div>}
+                                {selectedApp.parent_employee_name && <div><strong>Parent Employee Name:</strong> {selectedApp.parent_employee_name}</div>}
+                                {selectedApp.parent_pf_number && <div><strong>Parent PF Number:</strong> {selectedApp.parent_pf_number}</div>}
+                                
+                                {/* Employee fields */}
+                                {selectedApp.designation && <div><strong>Designation:</strong> {selectedApp.designation}</div>}
+                                {selectedApp.office_address && <div><strong>Office Address:</strong> {selectedApp.office_address}</div>}
+                                {selectedApp.company_name && <div><strong>Company Name:</strong> {selectedApp.company_name}</div>}
+                                {selectedApp.sector_type && <div><strong>Sector Type:</strong> {selectedApp.sector_type}</div>}
+                                {selectedApp.employment_type && <div><strong>Employment Type:</strong> {selectedApp.employment_type}</div>}
+                                {selectedApp.employee_id && <div><strong>Employee ID:</strong> {selectedApp.employee_id}</div>}
+                                {selectedApp.gov_emp_id_pf && <div><strong>Govt Emp ID/PF:</strong> {selectedApp.gov_emp_id_pf}</div>}
+                                {selectedApp.dept_ministry && <div><strong>Department/Ministry:</strong> {selectedApp.dept_ministry}</div>}
+                                {selectedApp.office_name && <div><strong>Office Name:</strong> {selectedApp.office_name}</div>}
+                                {selectedApp.working_district && <div><strong>Working District:</strong> {selectedApp.working_district}</div>}
+                                {selectedApp.office_district && <div><strong>Office District:</strong> {selectedApp.office_district}</div>}
+                                
+                                {/* Journalist fields */}
+                                {selectedApp.media_organization && <div><strong>Media Organization:</strong> {selectedApp.media_organization}</div>}
+                                {selectedApp.press_id_number && <div><strong>Press ID Number:</strong> {selectedApp.press_id_number}</div>}
+                                {selectedApp.experience_years && <div><strong>Experience (Years):</strong> {selectedApp.experience_years}</div>}
+                                
+                                {/* NGO fields */}
+                                {selectedApp.ngo_name && <div><strong>NGO Name:</strong> {selectedApp.ngo_name}</div>}
+                                {selectedApp.ngo_registration_number && <div><strong>NGO Registration No:</strong> {selectedApp.ngo_registration_number}</div>}
+                                {selectedApp.ngo_address && <div><strong>NGO Address:</strong> {selectedApp.ngo_address}</div>}
+                                
+                                {/* Validity */}
+                                {selectedApp.validity && <div><strong>Validity Requested:</strong> {selectedApp.validity}</div>}
                             </div>
 
                             <h3 style={styles.sectionTitle}>Documents & Photos</h3>
@@ -495,6 +603,62 @@ const styles = {
         fontWeight: 'bold',
         fontSize: '14px',
         transition: 'opacity 0.2s',
+    },
+    statsContainer: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '20px',
+        marginBottom: '30px'
+    },
+    statCard: {
+        backgroundColor: '#fff',
+        padding: '20px',
+        borderRadius: '12px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+        cursor: 'pointer',
+        transition: 'transform 0.2s, box-shadow 0.2s'
+    },
+    statNumber: {
+        fontSize: '32px',
+        fontWeight: 'bold',
+        color: '#333'
+    },
+    statLabel: {
+        fontSize: '14px',
+        color: '#666',
+        marginTop: '5px'
+    },
+    filterSection: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '20px',
+        flexWrap: 'wrap',
+        gap: '15px'
+    },
+    filterButtons: {
+        display: 'flex',
+        gap: '10px'
+    },
+    filterBtn: {
+        padding: '8px 16px',
+        border: '1px solid #dcdcdc',
+        borderRadius: '6px',
+        backgroundColor: '#fff',
+        color: '#666',
+        cursor: 'pointer',
+        fontSize: '14px',
+        transition: 'all 0.2s'
+    },
+    filterBtnActive: {
+        padding: '8px 16px',
+        border: '1px solid #3498db',
+        borderRadius: '6px',
+        backgroundColor: '#3498db',
+        color: '#fff',
+        cursor: 'pointer',
+        fontSize: '14px',
+        fontWeight: 'bold'
     }
 };
 

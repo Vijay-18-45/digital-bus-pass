@@ -107,10 +107,14 @@ export const initializeDatabase = async () => {
                 depot VARCHAR(255),
                 institution_name VARCHAR(255),
                 course_year VARCHAR(100),
+                registration_number VARCHAR(100),
                 ssc_board VARCHAR(100),
                 ssc_year VARCHAR(4),
                 ssc_htno VARCHAR(50),
-                is_employee_child BOOLEAN DEFAULT FALSE,
+                is_govt_employee_child BOOLEAN DEFAULT FALSE,
+                parent_employee_name VARCHAR(255),
+                parent_pf_number VARCHAR(100),
+                study_certificate_doc LONGTEXT,
                 FOREIGN KEY (application_id) REFERENCES applications(application_id) ON DELETE CASCADE
             )
         `);
@@ -128,6 +132,9 @@ export const initializeDatabase = async () => {
                 depot VARCHAR(255),
                 school_name VARCHAR(255),
                 class_studying VARCHAR(50),
+                is_govt_employee_child BOOLEAN DEFAULT FALSE,
+                parent_employee_name VARCHAR(255),
+                parent_pf_number VARCHAR(100),
                 FOREIGN KEY (application_id) REFERENCES applications(application_id) ON DELETE CASCADE
             )
         `);
@@ -138,9 +145,10 @@ export const initializeDatabase = async () => {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 application_id VARCHAR(20) UNIQUE NOT NULL,
                 residential_address TEXT,
-                boarding_point VARCHAR(255),
                 via VARCHAR(255),
                 occupation VARCHAR(100),
+                depot_details VARCHAR(255),
+                address_proof_type VARCHAR(100),
                 FOREIGN KEY (application_id) REFERENCES applications(application_id) ON DELETE CASCADE
             )
         `);
@@ -161,7 +169,7 @@ export const initializeDatabase = async () => {
                 retirement_date DATE,
                 pay_scale VARCHAR(100),
                 working_district VARCHAR(255),
-                boarding_point VARCHAR(255),
+                depot_details VARCHAR(255),
                 FOREIGN KEY (application_id) REFERENCES applications(application_id) ON DELETE CASCADE
             )
         `);
@@ -180,7 +188,8 @@ export const initializeDatabase = async () => {
                 employment_type VARCHAR(100),
                 joining_date DATE,
                 office_district VARCHAR(255),
-                boarding_point VARCHAR(255),
+                depot_details VARCHAR(255),
+                monthly_income VARCHAR(100),
                 FOREIGN KEY (application_id) REFERENCES applications(application_id) ON DELETE CASCADE
             )
         `);
@@ -197,6 +206,7 @@ export const initializeDatabase = async () => {
                 press_id_number VARCHAR(50),
                 experience_years INT,
                 validity VARCHAR(50),
+                depot_details VARCHAR(255),
                 FOREIGN KEY (application_id) REFERENCES applications(application_id) ON DELETE CASCADE
             )
         `);
@@ -213,6 +223,10 @@ export const initializeDatabase = async () => {
                 designation VARCHAR(100),
                 experience_years INT,
                 validity VARCHAR(50),
+                depot_details VARCHAR(255),
+                date_of_appointment DATE,
+                date_of_retirement DATE,
+                scale_pay VARCHAR(100),
                 FOREIGN KEY (application_id) REFERENCES applications(application_id) ON DELETE CASCADE
             )
         `);
@@ -320,9 +334,10 @@ export const createApplication = async (data) => {
                 await connection.query(`
                     INSERT INTO student_above_ssc (
                         application_id, door_street, village_town, mandal_district,
-                        pincode, via, depot, institution_name, course_year,
-                        ssc_board, ssc_year, ssc_htno, is_employee_child
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        pincode, via, depot, institution_name, course_year, registration_number,
+                        ssc_board, ssc_year, ssc_htno, is_govt_employee_child,
+                        parent_employee_name, parent_pf_number, study_certificate_doc
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     applicationId,
                     data.doorStreet || null,
@@ -333,10 +348,14 @@ export const createApplication = async (data) => {
                     data.depot || null,
                     data.institutionName || null,
                     data.courseYear || null,
+                    data.registrationNumber || null,
                     data.sscBoard || null,
                     data.sscYear || null,
                     data.sscHtno || null,
-                    data.isEmployeeChild || false
+                    data.isGovtEmployeeChild || data.isEmployeeChild || false,
+                    data.parentEmployeeName || null,
+                    data.parentPfNumber || null,
+                    data.studyCertificateDoc || null
                 ]);
                 break;
                 
@@ -344,8 +363,9 @@ export const createApplication = async (data) => {
                 await connection.query(`
                     INSERT INTO student_below_ssc (
                         application_id, door_street, village_town, mandal_district,
-                        pincode, via, depot, school_name, class_studying
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        pincode, via, depot, school_name, class_studying,
+                        is_govt_employee_child, parent_employee_name, parent_pf_number
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     applicationId,
                     data.doorStreet || null,
@@ -355,21 +375,26 @@ export const createApplication = async (data) => {
                     data.via || null,
                     data.depot || null,
                     data.schoolName || null,
-                    data.classStudying || null
+                    data.classStudying || null,
+                    data.isGovtEmployeeChild || data.isEmployeeChild || false,
+                    data.parentEmployeeName || null,
+                    data.parentPfNumber || null
                 ]);
                 break;
                 
             case 'citizen':
                 await connection.query(`
                     INSERT INTO citizen_applications (
-                        application_id, residential_address, boarding_point, via, occupation
-                    ) VALUES (?, ?, ?, ?, ?)
+                        application_id, residential_address, via, occupation,
+                        depot_details, address_proof_type
+                    ) VALUES (?, ?, ?, ?, ?, ?)
                 `, [
                     applicationId,
-                    data.residentialAddress || null,
-                    data.boardingPoint || null,
+                    data.residentialAddress || data.doorStreet || null,
                     data.via || null,
-                    data.occupation || null
+                    data.occupation || null,
+                    data.depotDetails || null,
+                    data.addressProofType || null
                 ]);
                 break;
                 
@@ -378,7 +403,7 @@ export const createApplication = async (data) => {
                     INSERT INTO gov_employee_applications (
                         application_id, residential_address, office_address, designation,
                         gov_emp_id_pf, dept_ministry, office_name, employment_type,
-                        appointment_date, retirement_date, pay_scale, working_district, boarding_point
+                        appointment_date, retirement_date, pay_scale, working_district, depot_details
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     applicationId,
@@ -393,7 +418,7 @@ export const createApplication = async (data) => {
                     data.retirementDate || null,
                     data.payScale || null,
                     data.workingDistrict || null,
-                    data.boardingPoint || null
+                    data.depotDetails || null
                 ]);
                 break;
                 
@@ -402,8 +427,8 @@ export const createApplication = async (data) => {
                     INSERT INTO non_gov_employee_applications (
                         application_id, residential_address, office_address, designation,
                         employee_id, company_name, sector_type, employment_type,
-                        joining_date, office_district, boarding_point
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        joining_date, office_district, depot_details, monthly_income
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     applicationId,
                     data.residentialAddress || null,
@@ -415,7 +440,8 @@ export const createApplication = async (data) => {
                     data.employmentType || null,
                     data.joiningDate || null,
                     data.officeDistrict || null,
-                    data.boardingPoint || null
+                    data.depotDetails || null,
+                    data.monthlyIncome || null
                 ]);
                 break;
                 
@@ -423,8 +449,8 @@ export const createApplication = async (data) => {
                 await connection.query(`
                     INSERT INTO journalist_applications (
                         application_id, residential_address, office_address, media_organization,
-                        designation, press_id_number, experience_years, validity
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        designation, press_id_number, experience_years, validity, depot_details
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     applicationId,
                     data.residentialAddress || null,
@@ -433,7 +459,8 @@ export const createApplication = async (data) => {
                     data.designation || null,
                     data.pressIdNumber || null,
                     data.experienceYears || null,
-                    data.validity || null
+                    data.validity || null,
+                    data.depotDetails || null
                 ]);
                 break;
                 
@@ -441,8 +468,9 @@ export const createApplication = async (data) => {
                 await connection.query(`
                     INSERT INTO ngo_applications (
                         application_id, residential_address, ngo_address, ngo_name,
-                        ngo_registration_number, designation, experience_years, validity
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        ngo_registration_number, designation, experience_years, validity, depot_details,
+                        date_of_appointment, date_of_retirement, scale_pay
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     applicationId,
                     data.residentialAddress || null,
@@ -451,7 +479,11 @@ export const createApplication = async (data) => {
                     data.ngoRegistrationNumber || null,
                     data.designation || null,
                     data.experienceYears || null,
-                    data.validity || null
+                    data.validity || null,
+                    data.depotDetails || null,
+                    data.dateOfAppointment || null,
+                    data.dateOfRetirement || null,
+                    data.scalePay || null
                 ]);
                 break;
         }
