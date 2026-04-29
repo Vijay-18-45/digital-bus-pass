@@ -11,7 +11,7 @@ A web application to simplify and automate the APSRTC student bus pass process.
 - **Secure authentication using JWT**: Role-based access (Student / Admin) with encrypted tokens.
 - **Online payment integration**: Convenient digital payments.
 - **Automatic PDF bus pass generation**: Get a downloadable PDF instantly upon approval.
-- **SMS / Email notifications**: Stay updated on application status via Twilio and Email.
+- **SMS / Email notifications**: Stay updated on application status.
 - **Workflow automation using n8n**: Automated background tasks for seamless operations.
 
 ## Tech Stack
@@ -19,7 +19,7 @@ A web application to simplify and automate the APSRTC student bus pass process.
 - **Frontend**: React.js, Vite, React Router, Socket.io-client
 - **Backend**: Node.js, Express.js
 - **Database**: MySQL / MongoDB (Supported via backend drivers)
-- **Tools & APIs**: JWT (Authentication), Twilio (SMS), Nodemailer (Email)
+- **Tools**: JWT (Authentication)
 
 ## How It Works
 
@@ -50,7 +50,7 @@ A web application to simplify and automate the APSRTC student bus pass process.
 
 4. **Environment Variables:**
    - Create a `.env` file in the `backend` directory.
-   - Add your database credentials, JWT secret key, and API keys for Twilio/Nodemailer (e.g., `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`).
+   - Add your database credentials and JWT secret key.
 
 ## Usage
 
