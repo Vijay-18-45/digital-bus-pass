@@ -11,7 +11,6 @@ A web application to simplify and automate the APSRTC student bus pass process.
 - **Secure authentication using JWT**: Role-based access (Student / Admin) with encrypted tokens.
 - **Online payment integration**: Convenient digital payments.
 - **Automatic PDF bus pass generation**: Get a downloadable PDF instantly upon approval.
-- **QR code for verification**: Easy scanning for validity checks.
 - **SMS / Email notifications**: Stay updated on application status via Twilio and Email.
 - **Workflow automation using n8n**: Automated background tasks for seamless operations.
 
@@ -26,7 +25,7 @@ A web application to simplify and automate the APSRTC student bus pass process.
 
 1. **Apply**: Students register and submit their bus pass application online, uploading necessary documents.
 2. **Verify**: Admins log into the dashboard, review the submitted documents, and approve or reject the application.
-3. **Generate**: Upon approval, the system automatically generates a digital bus pass in PDF format complete with a verifiable QR code.
+3. **Generate**: Upon approval, the system automatically generates a digital bus pass in PDF format.
 4. **Notify**: The student is notified via SMS or Email that their pass is ready for download and use.
 
 ## Installation
