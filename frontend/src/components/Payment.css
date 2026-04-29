@@ -159,6 +159,29 @@
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
+.payment-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-inline-loading {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn-spinner {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+}
+
 /* ─── Student Info Preview ─── */
 .student-preview-box {
     background: var(--secondary-bg);
@@ -348,6 +371,50 @@
     animation: fadeSlide 0.5s ease;
 }
 
+.transition-success {
+    animation: successReveal 0.55s ease;
+}
+
+@keyframes successReveal {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.payment-meta-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+}
+
+.sim-pass-meta {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.sim-pass-meta h4 {
+    margin: 0 0 6px 0;
+    color: #1e3a8a;
+    font-size: 14px;
+}
+
+.sim-pass-meta p {
+    margin: 0;
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
 /* ─── Mode Badge ─── */
 .mode-badge {
     display: inline-block;
@@ -405,5 +472,190 @@
     .payment-title,
     .payment-subtitle {
         display: none;
+    }
+}
+
+/* ─── PhonePe QR Payment Section ─── */
+.qr-payment-section {
+    margin-top: 24px;
+    text-align: center;
+    animation: fadeSlide 0.4s ease;
+}
+
+.qr-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.qr-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #5f259f;
+    margin: 0;
+}
+
+.qr-amount-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #5f259f, #7b2ff7);
+    color: white;
+    font-size: 28px;
+    font-weight: 800;
+    padding: 8px 28px;
+    border-radius: 30px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 16px rgba(95, 37, 159, 0.3);
+}
+
+.qr-image-container {
+    background: white;
+    border: 3px solid #5f259f;
+    border-radius: 16px;
+    padding: 16px;
+    display: inline-block;
+    margin-bottom: 16px;
+    box-shadow: 0 6px 24px rgba(95, 37, 159, 0.15);
+    position: relative;
+}
+
+.qr-image-container::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #5f259f, #7b2ff7, #5f259f);
+    z-index: -1;
+    opacity: 0.2;
+}
+
+.qr-code-image {
+    width: 240px;
+    height: 240px;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.qr-instructions {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 12px 0 20px;
+    line-height: 1.5;
+    padding: 10px 16px;
+    background: var(--hint-bg);
+    border: 1.5px solid var(--hint-border);
+    border-radius: 10px;
+}
+
+.qr-action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.qr-confirm-btn {
+    background: linear-gradient(135deg, #28a745, #20883a) !important;
+}
+
+.qr-confirm-btn:hover {
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3) !important;
+}
+
+.qr-cancel-btn {
+    background: #dc3545 !important;
+}
+
+.qr-cancel-btn:hover {
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3) !important;
+}
+
+/* ─── Payment Failed Popup ─── */
+.payment-fail-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.payment-fail-popup {
+    background: var(--card-bg, #fff);
+    border-radius: 18px;
+    padding: 36px 30px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: popIn 0.3s ease;
+    border: 2px solid #dc3545;
+}
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.fail-icon {
+    font-size: 56px;
+    margin-bottom: 12px;
+}
+
+.fail-title {
+    color: #dc3545;
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0 0 10px;
+}
+
+.fail-message {
+    color: var(--text-secondary, #666);
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0 0 24px;
+}
+
+.fail-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.fail-actions .payment-btn {
+    font-size: 15px;
+    padding: 12px 24px;
+}
+
+@media (max-width: 600px) {
+    .qr-code-image {
+        width: 200px;
+        height: 200px;
+    }
+
+    .qr-amount-badge {
+        font-size: 24px;
+        padding: 6px 22px;
+    }
+
+    .payment-fail-popup {
+        padding: 28px 20px;
     }
 }

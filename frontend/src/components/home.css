@@ -17,6 +17,41 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+/* ----- USER SUB HEADER WITH LOGOUT ----- */
+.user-sub-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 40px;
+  background: white;
+  border-bottom: 2px solid #d01c24;
+}
+
+.user-sub-header-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: #333;
+  font-weight: 600;
+}
+
+.user-logout-btn {
+  padding: 8px 20px;
+  background: #d01c24;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.user-logout-btn:hover {
+  background: #b5151a;
+}
+
 /* ----- CAROUSEL STYLES ----- */
 .carousel-container {
   width: 100%;

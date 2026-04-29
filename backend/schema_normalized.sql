@@ -7,6 +7,7 @@ CREATE DATABASE IF NOT EXISTS bus_pass_system;
 USE bus_pass_system;
 
 -- Drop existing tables (in correct order due to foreign keys)
+DROP TABLE IF EXISTS renewal_payments;
 DROP TABLE IF EXISTS payments;
 DROP TABLE IF EXISTS passes;
 DROP TABLE IF EXISTS student_above_ssc;
@@ -81,6 +82,7 @@ CREATE TABLE applications (
     
     -- Status & Timestamps
     status ENUM('pending', 'approved', 'rejected', 'processing') DEFAULT 'pending',
+    renewal_id VARCHAR(30) UNIQUE DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
@@ -305,9 +307,12 @@ CREATE TABLE payments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     payment_id VARCHAR(30) UNIQUE NOT NULL,
     application_id VARCHAR(20) NOT NULL,
+    pass_number VARCHAR(20),
     
     -- Payment Details
     amount DECIMAL(10, 2) NOT NULL,
+    plan_months INT DEFAULT 1,
+    is_renewal BOOLEAN DEFAULT FALSE,
     payment_method VARCHAR(50),
     transaction_id VARCHAR(100),
     
@@ -318,6 +323,35 @@ CREATE TABLE payments (
     
     FOREIGN KEY (application_id) REFERENCES applications(application_id) ON DELETE CASCADE,
     INDEX idx_payment_id (payment_id),
+    INDEX idx_pass_number (pass_number),
+    INDEX idx_status (status)
+);
+
+-- =========================================
+-- RENEWAL PAYMENTS TABLE
+-- =========================================
+
+CREATE TABLE renewal_payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    payment_id VARCHAR(30) UNIQUE NOT NULL,
+    application_id VARCHAR(20) NOT NULL,
+    pass_number VARCHAR(20),
+
+    -- Payment Details
+    amount DECIMAL(10, 2) NOT NULL,
+    plan_months INT DEFAULT 1,
+    is_renewal BOOLEAN DEFAULT TRUE,
+    payment_method VARCHAR(50),
+    transaction_id VARCHAR(100),
+
+    -- Status
+    status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+    paid_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (application_id) REFERENCES applications(application_id) ON DELETE CASCADE,
+    INDEX idx_payment_id (payment_id),
+    INDEX idx_pass_number (pass_number),
     INDEX idx_status (status)
 );
 

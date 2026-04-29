@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './GovEmpApplicationForm.css';
 import LogoBackButton from './LogoBackButton';
 import { useLanguage } from '../context/LanguageContext';
@@ -7,18 +7,62 @@ import { API_ENDPOINTS } from '../api/config';
 const GovEmpApplicationForm = () => {
     const { t } = useLanguage();
     const [photo, setPhoto] = useState(null);
+    const [isPhysicallyChallenged, setIsPhysicallyChallenged] = useState(false);
     const [documents, setDocuments] = useState({
         idCardDoc: null,
-        salaryCertificateDoc: null,
-        addressProofDoc: null
+        employmentDoc: null,
+        addressProofDoc: null,
+        disabilityCertificateDoc: null
     });
+    const [formData, setFormData] = useState({
+        fullName: '',
+        dateOfBirth: '',
+        gender: '',
+        employmentType: '',
+        organizationName: '',
+        officeName: '',
+        designation: '',
+        employeeId: '',
+        pfId: '',
+        officeAddress: '',
+        officeCity: '',
+        officeDistrict: '',
+        officePincode: '',
+        houseAddress: '',
+        villageTownCity: '',
+        residentDistrict: '',
+        residentPincode: '',
+        boardingPoint: '',
+        destination: '',
+        busDepot: '',
+        routeSelection: '',
+        passType: '',
+        passDuration: '',
+        mobileNumber: '',
+        declaration: false
+    });
+
     const [showCamera, setShowCamera] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [touched, setTouched] = useState({});
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const fileInputRef = useRef(null);
-    const formRef = useRef(null);
+
+    useEffect(() => {
+        const identifier = localStorage.getItem('userIdentifier');
+        if (identifier && /^\d+$/.test(identifier)) {
+            setFormData(prev => ({ ...prev, mobileNumber: identifier }));
+        }
+    }, []);
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
@@ -77,42 +121,56 @@ const GovEmpApplicationForm = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.declaration) {
+            alert('Please accept the declaration');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            const form = e.target;
-            const formDataObj = new FormData(form);
-
-            // Log ALL form fields to console for debugging
-            console.log('=== FORM DATA ENTRIES ===');
-            const entries = {};
-            for (let [key, value] of formDataObj.entries()) {
-                entries[key] = value;
-                console.log(`${key}: "${value}"`);
-            }
-            console.log('Total fields found:', Object.keys(entries).length);
-            console.log('=========================');
-
-            // Required field validation with section info
-            const requiredFields = [
-                { name: 'fullName', label: 'Full Name', section: '1. Applicant Details' },
-                { name: 'aadharNumber', label: 'Aadhaar Number', section: '1. Applicant Details' },
-                { name: 'mobileNumber', label: 'Mobile Number', section: '1. Applicant Details' },
-                { name: 'email', label: 'Email ID', section: '1. Applicant Details' },
-                { name: 'gender', label: 'Gender', section: '1. Applicant Details' },
-                { name: 'employmentType', label: 'Employment Type', section: '2. Employment Information' },
-                { name: 'passType', label: 'Pass Type', section: '3. Route Details' },
-                { name: 'fromPlace', label: 'From Place', section: '3. Route Details' },
-                { name: 'toPlace', label: 'To Place', section: '3. Route Details' }
-            ];
-
             const missingFields = [];
-            for (const field of requiredFields) {
-                const value = formDataObj.get(field.name);
-                console.log(`Checking ${field.name}: "${value}"`);
-                if (!value || value.trim() === '') {
-                    missingFields.push(`${field.label} (${field.section})`);
-                }
+            // Personal
+            if (!formData.fullName.trim()) missingFields.push('Full Name');
+            if (!formData.dateOfBirth) missingFields.push('Date of Birth');
+            if (!formData.gender) missingFields.push('Gender');
+            if (!photo) missingFields.push('Passport Size Photo');
+            
+            // Employment
+            if (!formData.employmentType) missingFields.push('Employee Type');
+            if (!formData.organizationName.trim()) missingFields.push('Organization/Department Name');
+            if (!formData.officeName.trim()) missingFields.push('Office/Organization Name');
+            if (!formData.designation.trim()) missingFields.push('Designation');
+            if (!formData.employeeId.trim()) missingFields.push('Employee ID Number');
+            
+            // Office Address
+            if (!formData.officeAddress.trim()) missingFields.push('Office Address');
+            if (!formData.officeCity.trim()) missingFields.push('Office City/Town');
+            if (!formData.officeDistrict.trim()) missingFields.push('Office District');
+            if (!formData.officePincode.trim()) missingFields.push('Office PIN Code');
+            
+            // Residential Address
+            if (!formData.houseAddress.trim()) missingFields.push('House Address');
+            if (!formData.villageTownCity.trim()) missingFields.push('Residential Village/Town/City');
+            if (!formData.residentDistrict.trim()) missingFields.push('Residential District');
+            if (!formData.residentPincode.trim()) missingFields.push('Residential PIN Code');
+            
+            // Travel
+            if (!formData.boardingPoint.trim()) missingFields.push('Boarding Point');
+            if (!formData.destination.trim()) missingFields.push('Destination');
+            if (!formData.busDepot.trim()) missingFields.push('Nearest Bus Depot');
+            
+            // Pass
+            if (!formData.passType) missingFields.push('Pass Type');
+            if (!formData.passDuration) missingFields.push('Pass Duration');
+            
+            // Contact
+            if (!formData.mobileNumber.trim()) missingFields.push('Mobile Number');
+            
+            // Document
+            if (!documents.idCardDoc && !documents.employmentDoc) {
+                missingFields.push('Employment Verification Document');
             }
 
             if (missingFields.length > 0) {
@@ -121,45 +179,39 @@ const GovEmpApplicationForm = () => {
                 return;
             }
 
-            // DEBUG: Log what's being sent
-            console.log('=== FORM DATA BEING SENT ===');
-            console.log('fullName:', formDataObj.get('fullName'));
-            console.log('mobileNumber:', formDataObj.get('mobileNumber'));
-            console.log('gender:', formDataObj.get('gender'));
-            for (let [key, value] of formDataObj.entries()) {
-                console.log(`${key}: ${value}`);
-            }
-            console.log('===========================');
-
             const payload = {
                 applicationType: 'gov_employee',
-                fullName: formDataObj.get('fullName'),
-                designation: formDataObj.get('designation'),
-                govEmpIdPf: formDataObj.get('govEmpIdPf'),
-                deptMinistry: formDataObj.get('deptMinistry'),
-                officeName: formDataObj.get('officeName'),
-                fatherName: formDataObj.get('fatherName'),
-                aadharNumber: formDataObj.get('aadharNumber'),
-                dateOfBirth: formDataObj.get('dateOfBirth'),
-                mobileNumber: formDataObj.get('mobileNumber'),
-                email: formDataObj.get('email'),
-                gender: formDataObj.get('gender'),
-                employmentType: formDataObj.get('employmentType'),
-                appointmentDate: formDataObj.get('appointmentDate'),
-                retirementDate: formDataObj.get('retirementDate'),
-                payScale: formDataObj.get('payScale'),
-                workingDistrict: formDataObj.get('workingDistrict'),
-                passType: formDataObj.get('passType'),
-                passDuration: formDataObj.get('passDuration'),
-                fromPlace: formDataObj.get('fromPlace'),
-                toPlace: formDataObj.get('toPlace'),
-                depot: formDataObj.get('depot'),
-                residentialAddress: formDataObj.get('residentialAddress'),
-                officeAddress: formDataObj.get('officeAddress'),
+                fullName: formData.fullName,
+                dateOfBirth: formData.dateOfBirth,
+                gender: formData.gender,
+                
+                employmentType: formData.employmentType,
+                deptMinistry: formData.organizationName,
+                officeName: formData.officeName,
+                designation: formData.designation,
+                govEmpIdPf: formData.employeeId,
+                payScale: formData.pfId, // Optional PF field mapped to payScale or similar
+
+                officeAddress: `${formData.officeAddress}, ${formData.officeCity}, ${formData.officeDistrict} - ${formData.officePincode}`,
+                residentialAddress: `${formData.houseAddress}, ${formData.villageTownCity}, ${formData.residentDistrict} - ${formData.residentPincode}`,
+                
+                fromPlace: formData.boardingPoint,
+                toPlace: formData.destination,
+                depotDetails: formData.busDepot,
+                via: formData.routeSelection,
+                
+                passType: formData.passType,
+                passDuration: formData.passDuration,
+                
+                mobile: formData.mobileNumber,
+                email: formData.email,
+                
                 photo: photo,
-                idCardDoc: documents.idCardDoc,
-                salaryCertificateDoc: documents.salaryCertificateDoc,
-                addressProofDoc: documents.addressProofDoc
+                idCardDoc: documents.idCardDoc || documents.employmentDoc,
+                addressProofDoc: documents.addressProofDoc,
+                
+                isPhysicallyChallenged: isPhysicallyChallenged,
+                disabilityCertificateDoc: documents.disabilityCertificateDoc
             };
 
             const response = await fetch(API_ENDPOINTS.submitApplication, {
@@ -170,16 +222,13 @@ const GovEmpApplicationForm = () => {
 
             const data = await response.json();
             if (response.ok) {
-                alert(`Application submitted successfully! Your Application ID: ${data.applicationId}`);
-                form.reset();
-                setPhoto(null);
-                setDocuments({ idCardDoc: null, salaryCertificateDoc: null, addressProofDoc: null });
+                alert(`Application submitted successfully! ID: ${data.applicationId}`);
+                window.location.reload();
             } else {
-                alert(`Submission failed: ${data.message || 'Unknown error'}\n\nPlease check all required fields are filled.`);
+                alert(`Submission failed: ${data.message || 'Unknown error'}`);
             }
         } catch (error) {
-            console.error('Submission error:', error);
-            alert('Failed to submit application. Please check your internet connection and try again.');
+            alert('Failed to submit application. Please check your connection.');
         } finally {
             setIsSubmitting(false);
         }
@@ -189,214 +238,216 @@ const GovEmpApplicationForm = () => {
         <div className="gov-emp-page-container">
             <LogoBackButton />
             <div className="gov-emp-form-wrapper">
-                <h2>{t('gov_emp_pass_title')}</h2>
-                <h4>(RTC – GOV/EMP BUS PASS)</h4>
+                <div className="form-header-premium">
+                    <h2>APSRTC Employee Pass</h2>
+                    <h4>Government & Professional Employee Registration</h4>
+                </div>
 
-                <form ref={formRef} onSubmit={handleSubmit}>
-                    {/* 1. EMPLOYEE DETAILS */}
+                <form onSubmit={handleSubmit}>
+                    {/* 1. PERSONAL DETAILS */}
                     <div className="form-section">
-                        <h3>1. {t('applicant_details')}</h3>
+                        <h3>1. Personal Details (Mandatory)</h3>
                         <div className="form-grid">
                             <div className={`form-group full-width ${showError('fullName') ? 'has-error' : ''}`}>
-                                <label>1. {t('full_name')} <span className="required-star">*</span></label>
-                                <input type="text" name="fullName" required pattern="[A-Za-z\s]+" title="Only letters and spaces allowed" onBlur={handleBlur} placeholder={t('enter_name')} />
-                                {showError('fullName') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid name (letters only).</span>}
+                                <label>Full Name of Employee <span className="required-star">*</span></label>
+                                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required onBlur={handleBlur} />
                             </div>
                             <div className="form-group">
-                                <label>2a. {t('designation')}</label>
-                                <input type="text" name="designation" required />
+                                <label>Date of Birth <span className="required-star">*</span></label>
+                                <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} required />
                             </div>
                             <div className="form-group">
-                                <label>2b. {t('gov_emp_id_pf')}</label>
-                                <input type="text" name="govEmpIdPf" required />
-                            </div>
-                            <div className="form-group">
-                                <label>3a. {t('dept_ministry')}</label>
-                                <input type="text" name="deptMinistry" required />
-                            </div>
-                            <div className="form-group">
-                                <label>3b. {t('office_name')}</label>
-                                <input type="text" name="officeName" required />
-                            </div>
-                            <div className={`form-group ${showError('fatherName') ? 'has-error' : ''}`}>
-                                <label>4a. {t('father_guardian_name')} <span className="required-star">*</span></label>
-                                <input type="text" name="fatherName" required pattern="[A-Za-z\s]+" title="Only letters and spaces allowed" onBlur={handleBlur} placeholder={t('father_guardian_name')} />
-                                {showError('fatherName') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid name (letters only).</span>}
-                            </div>
-                            <div className={`form-group ${showError('aadharNumber') ? 'has-error' : ''}`}>
-                                <label>4b. {t('aadhar_number')} <span className="required-star">*</span></label>
-                                <input type="text" name="aadharNumber" pattern="\d{12}" title="12 digit Aadhaar number" maxLength="12" onBlur={handleBlur} required placeholder={t('enter_aadhar')} />
-                                {showError('aadharNumber') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Aadhaar must be exactly 12 digits.</span>}
-                            </div>
-                            <div className={`form-group ${showError('dateOfBirth') ? 'has-error' : ''}`}>
-                                <label>5. {t('date_of_birth')} <span className="required-star">*</span></label>
-                                <input type="date" name="dateOfBirth" max={new Date().toISOString().split('T')[0]} onBlur={handleBlur} required />
-                                {showError('dateOfBirth') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please select a valid date of birth.</span>}
-                            </div>
-                            <div className={`form-group ${showError('mobileNumber') ? 'has-error' : ''}`}>
-                                <label>6. {t('mobile_no')} <span className="required-star">*</span></label>
-                                <input type="tel" name="mobileNumber" pattern="[6-9]\d{9}" title="10 digit mobile number starting with 6-9" maxLength="10" onBlur={handleBlur} required placeholder={t('enter_mobile')} />
-                                {showError('mobileNumber') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Mobile number must be 10 digits.</span>}
-                            </div>
-                            <div className={`form-group ${showError('email') ? 'has-error' : ''}`}>
-                                <label>7. {t('email_id')} <span className="required-star">*</span></label>
-                                <input type="email" name="email" required onBlur={handleBlur} placeholder={t('email')} />
-                                {showError('email') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid email address.</span>}
-                            </div>
-                            <div className={`form-group ${showError('gender') ? 'has-error' : ''}`}>
-                                <label>8. {t('gender')} <span className="required-star">*</span></label>
-                                <select name="gender" required defaultValue="" onBlur={handleBlur}>
-                                    <option value="" disabled>{t('select_gender')}</option>
-                                    <option value="Male">{t('male')}</option>
-                                    <option value="Female">{t('female')}</option>
-                                    <option value="Other">{t('other')}</option>
-                                </select>
-                                {showError('gender') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please select a gender.</span>}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 2. EMPLOYMENT INFORMATION */}
-                    <div className="form-section">
-                        <h3>2. {t('employment_info')}</h3>
-                        <div className="form-grid">
-                            <div className="form-group full-width">
-                                <label>9. {t('employment_type')}</label>
-                                <select name="employmentType" required defaultValue="">
-                                    <option value="" disabled>{t('select_pass')} {t('employment_type')}</option>
-                                    <option value="Permanent Government Employee">{t('perm_gov_emp')}</option>
-                                    <option value="State Government">{t('state_gov')}</option>
-                                    <option value="Central Government">{t('central_gov')}</option>
+                                <label>Gender <span className="required-star">*</span></label>
+                                <select name="gender" value={formData.gender} onChange={handleChange} required>
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
                                 </select>
                             </div>
-                            <div className="form-group">
-                                <label>10. {t('appointment_date')}</label>
-                                <input type="date" name="appointmentDate" required />
-                            </div>
-                            <div className="form-group">
-                                <label>11. {t('retirement_date')}</label>
-                                <input type="date" name="retirementDate" required />
-                            </div>
-                            <div className="form-group">
-                                <label>12. {t('pay_scale')}</label>
-                                <input type="text" name="payScale" required />
-                            </div>
-                            <div className="form-group">
-                                <label>13. {t('working_dist_city')}</label>
-                                <input type="text" name="workingDistrict" required />
-                            </div>
                         </div>
-                    </div>
-
-                    {/* 3. BUS PASS DETAILS */}
-                    <div className="form-section">
-                        <h3>3. {t('route_details')}</h3>
-                        <div className="form-grid">
-                            <div className="form-group">
-                                <label>14. {t('pass_type_req')}</label>
-                                <select name="passType" required defaultValue="">
-                                    <option value="" disabled>{t('select_pass')}</option>
-                                    <option value="Ordinary">{t('ordinary')}</option>
-                                    <option value="Metro Express">{t('metro_express')}</option>
-                                    <option value="City Special">{t('city_special')}</option>
-                                    <option value="Inter-District Pass">{t('inter_district_pass')}</option>
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>15. {t('pass_duration')}</label>
-                                <select name="passDuration" required defaultValue="">
-                                    <option value="" disabled>{t('select_validity')}</option>
-                                    <option value="Monthly">{t('monthly')}</option>
-                                    <option value="Quarterly">{t('quarterly')}</option>
-                                    <option value="Annual">{t('annual')}</option>
-                                </select>
-                            </div>
-                            <div className={`form-group ${showError('fromPlace') ? 'has-error' : ''}`}>
-                                <label>16. {t('from_place')} <span className="required-star">*</span></label>
-                                <input type="text" name="fromPlace" required onBlur={handleBlur} placeholder={t('starting_point')} />
-                                {showError('fromPlace') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Starting point is required.</span>}
-                            </div>
-                            <div className={`form-group ${showError('toPlace') ? 'has-error' : ''}`}>
-                                <label>{t('to_place')} <span className="required-star">*</span></label>
-                                <input type="text" name="toPlace" required onBlur={handleBlur} placeholder={t('to_place')} />
-                                {showError('toPlace') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Destination is required.</span>}
-                            </div>
-                            <div className="form-group full-width">
-                                <label>17. {t('depot')} <span className="required-star">*</span></label>
-                                <input type="text" name="depot" required placeholder={t('depot')} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 4. ADDRESS DETAILS */}
-                    <div className="form-section">
-                        <h3>4. {t('address_details')}</h3>
-                        <div className="form-grid">
-                            <div className="form-group full-width">
-                                <label>18. {t('res_address')}</label>
-                                <textarea name="residentialAddress" required rows="3" placeholder={t('door_no_street')}></textarea>
-                            </div>
-                            <div className="form-group full-width">
-                                <label>19. {t('office_name')} {t('address_details')}</label>
-                                <textarea name="officeAddress" required rows="3" placeholder={t('office_name') + ' ' + t('address_details')}></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 5. UPLOAD & VERIFICATION */}
-                    <div className="form-section">
-                        <h3>5. {t('upload_verification')}</h3>
-                        <div className="form-grid">
-                            <div className="form-group file-upload">
-                                <label>Employee ID Card <span className="required-star">*</span></label>
-                                <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'idCardDoc')} />
-                            </div>
-                            <div className="form-group file-upload">
-                                <label>{t('salary_cert_upload')} <span className="required-star">*</span></label>
-                                <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'salaryCertificateDoc')} />
-                            </div>
-                            <div className="form-group file-upload" style={{ gridColumn: '1 / -1' }}>
-                                <label>{t('address_proof_upload')} <span className="required-star">*</span></label>
-                                <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'addressProofDoc')} />
-                            </div>
-
-                            <div className="form-group photo-upload-container" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
-                                <label style={{ marginBottom: '15px' }}>{t('applicant_photo')}</label>
-                                <div className="photo-box-wrapper">
-                                    <span className="dim-label dim-width">{t('photo_width_label')}</span>
-                                    <div className="photo-box">
-                                        {photo ? <img src={photo} alt="Preview" /> : <img src="photo-spec.png" alt="No photo" style={{ opacity: 0.2 }} />}
-                                    </div>
-                                    <span className="dim-label dim-height">{t('photo_height_label')}</span>
+                        <div className="photo-section-premium" style={{ marginTop: '20px' }}>
+                            <label>Recent Passport Size Photo <span className="required-star">*</span></label>
+                            <div className="photo-upload-layout">
+                                <div className="photo-preview-box">
+                                    {photo ? <img src={photo} alt="Preview" /> : <div className="photo-placeholder"></div>}
                                 </div>
-                                <button type="button" className="photo-action-btn" onClick={() => fileInputRef.current.click()}>
-                                    {t('upload_capture_photo')} *
-                                </button>
-                                <button type="button" style={{ marginTop: '5px', fontSize: '0.8rem', background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', textDecoration: 'underline' }} onClick={startCamera}>
-                                    {t('use_camera')}
-                                </button>
-                                <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileUpload} />
-                                <p className="photo-help-text">
-                                    {t('photo_spec_text')}
-                                </p>
+                                <div className="photo-btn-group">
+                                    <button type="button" className="action-btn-p" onClick={() => fileInputRef.current.click()}>Upload File</button>
+                                    <button type="button" className="action-btn-p camera" onClick={startCamera}>Capture Live</button>
+                                    <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileUpload} />
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* 6. DECLARATION */}
-                    <div className="form-section declaration">
-                        <h3>6. Declaration by Applicant</h3>
-                        <label className="checkbox-label">
-                            <input type="checkbox" required />
-                            <span>I hereby declare that the information furnished above is true and correct. I request issuance of Government Employee Bus Pass subject to APSRTC rules and eligibility norms.</span>
-                        </label>
+                    {/* 2. EMPLOYMENT DETAILS */}
+                    <div className="form-section">
+                        <h3>2. Employment Details (Mandatory)</h3>
+                        <div className="form-grid">
+                            <div className="form-group">
+                                <label>Employee Type <span className="required-star">*</span></label>
+                                <select name="employmentType" value={formData.employmentType} onChange={handleChange} required>
+                                    <option value="">Select Type</option>
+                                    <option value="Government">Government</option>
+                                    <option value="Private">Private</option>
+                                    <option value="Contract">Contract</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Organization / Department Name <span className="required-star">*</span></label>
+                                <input type="text" name="organizationName" value={formData.organizationName} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Office / Organization Name <span className="required-star">*</span></label>
+                                <input type="text" name="officeName" value={formData.officeName} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Designation <span className="required-star">*</span></label>
+                                <input type="text" name="designation" value={formData.designation} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Employee ID Number <span className="required-star">*</span></label>
+                                <input type="text" name="employeeId" value={formData.employeeId} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>PF / GPF / EPF ID (Optional)</label>
+                                <input type="text" name="pfId" value={formData.pfId} onChange={handleChange} placeholder="If available" />
+                            </div>
+                        </div>
+                    </div>
 
+                    {/* 3. OFFICE ADDRESS */}
+                    <div className="form-section">
+                        <h3>3. Office Address (Mandatory)</h3>
+                        <div className="form-grid">
+                            <div className="form-group full-width">
+                                <label>Office Address <span className="required-star">*</span></label>
+                                <input type="text" name="officeAddress" value={formData.officeAddress} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>City / Town <span className="required-star">*</span></label>
+                                <input type="text" name="officeCity" value={formData.officeCity} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>District <span className="required-star">*</span></label>
+                                <input type="text" name="officeDistrict" value={formData.officeDistrict} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>PIN Code <span className="required-star">*</span></label>
+                                <input type="text" name="officePincode" value={formData.officePincode} onChange={handleChange} maxLength="6" required />
+                            </div>
+                        </div>
+                    </div>
 
+                    {/* 4. RESIDENTIAL ADDRESS */}
+                    <div className="form-section">
+                        <h3>4. Residential Address (Mandatory)</h3>
+                        <div className="form-grid">
+                            <div className="form-group full-width">
+                                <label>House Address <span className="required-star">*</span></label>
+                                <input type="text" name="houseAddress" value={formData.houseAddress} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Village / Town / City <span className="required-star">*</span></label>
+                                <input type="text" name="villageTownCity" value={formData.villageTownCity} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>District <span className="required-star">*</span></label>
+                                <input type="text" name="residentDistrict" value={formData.residentDistrict} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>PIN Code <span className="required-star">*</span></label>
+                                <input type="text" name="residentPincode" value={formData.residentPincode} onChange={handleChange} maxLength="6" required />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 5. TRAVEL DETAILS */}
+                    <div className="form-section">
+                        <h3>5. Travel Details (Mandatory)</h3>
+                        <div className="form-grid">
+                            <div className="form-group">
+                                <label>Boarding Point <span className="required-star">*</span></label>
+                                <input type="text" name="boardingPoint" value={formData.boardingPoint} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Destination (Office Location) <span className="required-star">*</span></label>
+                                <input type="text" name="destination" value={formData.destination} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Nearest Bus Depot <span className="required-star">*</span></label>
+                                <input type="text" name="busDepot" value={formData.busDepot} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Route Selection</label>
+                                <input type="text" name="routeSelection" value={formData.routeSelection} onChange={handleChange} placeholder="e.g. Via Hospital Road" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 6. PASS DETAILS */}
+                    <div className="form-section">
+                        <h3>6. Pass Details (Mandatory)</h3>
+                        <div className="form-grid">
+                            <div className="form-group">
+                                <label>Pass Type <span className="required-star">*</span></label>
+                                <select name="passType" value={formData.passType} onChange={handleChange} required>
+                                    <option value="">Select Pass</option>
+                                    <option value="Ordinary">Ordinary</option>
+                                    <option value="Metro Express">Metro Express</option>
+                                    <option value="Metro Deluxe">Metro Deluxe</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Pass Duration <span className="required-star">*</span></label>
+                                <select name="passDuration" value={formData.passDuration} onChange={handleChange} required>
+                                    <option value="">Select Duration</option>
+                                    <option value="Monthly">Monthly</option>
+                                    <option value="Quarterly">Quarterly</option>
+                                    <option value="Annual">Annual</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 7. CONTACT DETAILS */}
+                    <div className="form-section">
+                        <h3>7. Contact Details (Mandatory)</h3>
+                        <div className="form-grid">
+                            <div className="form-group full-width">
+                                <label>Registered Mobile Number <span className="required-star">*</span></label>
+                                <input type="tel" name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} />
+                                <small style={{ color: '#666', marginTop: '5px', display: 'block' }}>Pre-filled from your login. You can edit if needed.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 8. VERIFICATION DOCUMENT */}
+                    <div className="form-section">
+                        <h3>8. Employment Verification Document (Mandatory)</h3>
+                        <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>Upload any one: ID Card / Auth Letter / Employment Cert</p>
+                        <div className="form-grid">
+                            <div className="form-group full-width">
+                                <label>Upload Document <span className="required-star">*</span></label>
+                                <input type="file" accept="image/*,.pdf" onChange={(e) => handleDocumentUpload(e, 'employmentDoc')} required />
+                                {documents.employmentDoc && <span className="success-tag">✓ Document Ready</span>}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 9. DECLARATION */}
+                    <div className="form-section declaration-premium">
+                        <h3>9. Declaration (Mandatory)</h3>
+                        <div className="checkbox-layout">
+                            <input type="checkbox" name="declaration" checked={formData.declaration} onChange={handleChange} required />
+                            <label>I hereby declare that all information submitted is correct. I understand that false data leads to pass cancellation. <span className="required-star">*</span></label>
+                        </div>
                     </div>
 
                     <div className="form-submit-container">
                         <button type="submit" className="submit-btn" disabled={isSubmitting}>
-                            {isSubmitting ? 'Submitting...' : t('submit')}
+                            {isSubmitting ? 'Processing...' : 'Submit Application'}
                         </button>
                     </div>
                 </form>
@@ -405,11 +456,11 @@ const GovEmpApplicationForm = () => {
             {showCamera && (
                 <div className="camera-modal">
                     <div className="camera-content">
-                        <video ref={videoRef} autoPlay style={{ width: '100%', borderRadius: '8px' }} />
+                        <video ref={videoRef} autoPlay />
                         <canvas ref={canvasRef} width="320" height="240" style={{ display: 'none' }} />
                         <div className="camera-actions">
-                            <button type="button" onClick={capturePhoto} className="capture-btn">{t('capture')}</button>
-                            <button type="button" onClick={stopCamera} className="cancel-btn">{t('cancel')}</button>
+                            <button type="button" onClick={capturePhoto} className="capture-btn">Capture</button>
+                            <button type="button" onClick={stopCamera} className="cancel-btn">Cancel</button>
                         </div>
                     </div>
                 </div>

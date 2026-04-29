@@ -5,31 +5,24 @@ import BusPassCard from "./BusPassCard";
 import "./Payment.css";
 import Header from "./header";
 import { useLanguage } from "../context/LanguageContext";
+import { API_ENDPOINTS } from "../api/config";
+
+const PAYMENT_FLOW = {
+    PENDING: "PAYMENT_PENDING",
+    PROCESSING: "PROCESSING",
+    SUCCESS: "SUCCESS"
+};
+
+const SIMULATED_VERIFY_DELAY_MS = 700;
+const MAX_PROCESSING_MS = 3000;
+const MAX_STORED_PASSES = 20;
 
 /* ── Plans ─────────────────────────────────── */
 const PLANS = [
-    { months: 1, label: "Month", labelKey: "month", amount: 1050, save: null },
-    { months: 2, label: "Months", labelKey: "months", amount: 1900, save: "Save ₹200", saveKey: "save_200" },
-    { months: 6, label: "Months", labelKey: "months", amount: 5200, save: "Save ₹1100", saveKey: "save_1100" },
+    { months: 1, label: "Month", labelKey: "month", amount: 20, save: null },
+    { months: 2, label: "Months", labelKey: "months", amount: 30, save: null },
+    { months: 3, label: "Months", labelKey: "months", amount: 40, save: null },
 ];
-
-/* ── Mock DB for new passes ─────────────────── */
-const MOCK_DB = {
-    APP123: {
-        studentName: "Kumar",
-        schoolCollegeName: "VNR VJIET",
-        from: "Kukatpally",
-        to: "Bachupally",
-        photo: null,
-    },
-    APP456: {
-        studentName: "Rahul Sharma",
-        schoolCollegeName: "GVPCE",
-        from: "Madhurawada",
-        to: "RTC Complex",
-        photo: null,
-    },
-};
 
 /* ── Step Indicator ─────────────────────────── */
 const StepIndicator = ({ current, t }) => {
@@ -64,76 +57,271 @@ const Payment = ({ mode = "new" }) => {
     const [studentData, setStudentData] = useState(null);
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [generatedPass, setGeneratedPass] = useState(null);
+    const [paymentFlowState, setPaymentFlowState] = useState(PAYMENT_FLOW.PENDING);
+    const [paymentMeta, setPaymentMeta] = useState(null);
+
+    // PhonePe QR payment state
+    const [paymentId, setPaymentId] = useState(null);
+    const [showQR, setShowQR] = useState(false);
+    const [paymentFailed, setPaymentFailed] = useState(false);
+    const [failMessage, setFailMessage] = useState("");
+
+    const normalizePassFromBackend = (pass, fallbackData) => ({
+        applicationId: pass?.applicationId || fallbackData?.applicationId || "SIMULATED_APP",
+        renewalId: pass?.renewalId || fallbackData?.renewalId || null,
+        passNumber: pass?.passNumber || null,
+        studentName: pass?.holderName || fallbackData?.studentName || fallbackData?.fullName || "N/A",
+        full_name: pass?.holderName || fallbackData?.fullName || fallbackData?.studentName || "N/A",
+        name: pass?.holderName || fallbackData?.studentName || fallbackData?.fullName || "N/A",
+        fatherName: pass?.fatherName || fallbackData?.fatherName || "N/A",
+        father_name: pass?.fatherName || fallbackData?.fatherName || "N/A",
+        from_place: pass?.from || fallbackData?.from || "N/A",
+        from: pass?.from || fallbackData?.from || "N/A",
+        to_place: pass?.to || fallbackData?.to || "N/A",
+        to: pass?.to || fallbackData?.to || "N/A",
+        mobile: pass?.mobile || fallbackData?.mobile || "",
+        email: pass?.email || fallbackData?.email || "",
+        photo: pass?.photo || fallbackData?.photo || null,
+        applicationType: pass?.applicationType || fallbackData?.applicationType || "student_above_ssc",
+        schoolCollegeName: pass?.institutionName || fallbackData?.schoolCollegeName || fallbackData?.institutionName || "N/A",
+        institutionName: pass?.institutionName || fallbackData?.institutionName || fallbackData?.schoolCollegeName || "N/A",
+        date_of_birth: pass?.date_of_birth || fallbackData?.date_of_birth || null,
+        gender: pass?.gender || fallbackData?.gender || "N/A",
+        amount: pass?.amount || selectedPlan?.amount || 20,
+        amountPaid: pass?.amount || selectedPlan?.amount || 20,
+        planMonths: pass?.planMonths || selectedPlan?.months || 1,
+        issueDate: pass?.issueDate || new Date().toISOString(),
+        expiryDate: pass?.expiryDate || new Date().toISOString(),
+        isRenewal: Boolean(pass?.isRenewal ?? isRenewal),
+        paymentId: paymentMeta?.paymentId || null,
+        ticketNumber: pass?.ticketNumber || null
+    });
+
+    const getRandom6Digits = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+    const toLightweightPass = (pass) => {
+        const safePhoto = typeof pass.photo === "string" && pass.photo.startsWith("data:")
+            ? null
+            : (pass.photo || null);
+
+        return {
+            ...pass,
+            // Base64 images are large and quickly exhaust localStorage quota.
+            photo: safePhoto
+        };
+    };
+
+    const persistPassSafely = (pass) => {
+        const existing = JSON.parse(localStorage.getItem("myPasses") || "[]");
+        const compactNewPass = toLightweightPass(pass);
+        const compactExisting = existing.map((p) => toLightweightPass(p));
+        // Keep the new pass with photo intact, but sanitize old ones if needed
+        const next = [compactNewPass, ...compactExisting].slice(0, MAX_STORED_PASSES);
+
+        try {
+            localStorage.setItem("myPasses", JSON.stringify(next));
+            return;
+        } catch {
+            // Fallback: only when quota exceeded, strip photos from existing passes
+            // but try to keep the new pass photo if possible
+            const sanitized = next.map((p, idx) => {
+                // Keep photo for the newest pass (index 0) to show user their just-generated pass
+                if (idx === 0) return p;
+                // For older passes, strip photo to recover space
+                return { ...p, photo: null };
+            });
+            
+            try {
+                localStorage.setItem("myPasses", JSON.stringify(sanitized));
+            } catch {
+                // If still over quota, strip all photos
+                const forceReduced = sanitized.map((p) => ({
+                    ...p,
+                    photo: null
+                }));
+                localStorage.setItem("myPasses", JSON.stringify(forceReduced));
+            }
+        }
+    };
 
     /* ── Step 0: Fetch Details ── */
-    const handleFetch = () => {
+    const handleFetch = async () => {
         if (!inputId.trim()) {
-            alert(t('enter_id_pass_alert') + (isRenewal ? t('pass_number') : t('application_id')));
+            alert(t('enter_id_pass_alert') + (isRenewal ? t('pass_number') : t('renewal_id_label')));
             return;
         }
         setLoading(true);
-        setTimeout(() => {
-            let found = null;
 
+        try {
             if (isRenewal) {
-                // Look up existing passes in localStorage by pass number
-                const saved = JSON.parse(localStorage.getItem("myPasses") || "[]");
-                found = saved.find(
-                    (p) => p.passNumber?.toUpperCase() === inputId.trim().toUpperCase()
-                );
-                if (!found) {
-                    alert(t('pass_not_found_alert'));
-                    setLoading(false);
-                    return;
+                // 1) First, fetch from backend by renewal_id (source of truth)
+                const renewalRes = await fetch(API_ENDPOINTS.getByRenewalId(inputId.trim()));
+                const renewalData = await renewalRes.json();
+
+                if (renewalRes.ok && renewalData.success && renewalData.application) {
+                    const app = renewalData.application;
+                    setStudentData({
+                        applicationId: app.application_id,
+                        renewalId: app.renewal_id,
+                        studentName: app.full_name,
+                        fullName: app.full_name,
+                        fatherName: app.father_name,
+                        from: app.from_place,
+                        to: app.to_place,
+                        mobile: app.mobile,
+                        email: app.email,
+                        photo: app.photo,
+                        applicationType: app.application_type,
+                        status: app.status,
+                        institutionName: app.institution_name,
+                        schoolCollegeName: app.institution_name,
+                        date_of_birth: app.date_of_birth,
+                        gender: app.gender,
+                    });
+                    setStep(1);
+                } else {
+                    // 2) Fallback: localStorage pass lookup for older locally saved passes
+                    const saved = JSON.parse(localStorage.getItem("myPasses") || "[]");
+                    const found = saved.find(
+                        (p) => (p.renewal_id || p.renewalId)?.toUpperCase() === inputId.trim().toUpperCase()
+                    );
+
+                    if (!found) {
+                        alert("Renewal ID not found. Please check and try again.");
+                        setLoading(false);
+                        return;
+                    }
+
+                    setStudentData(found);
+                    setStep(1);
                 }
             } else {
-                // New pass — look up mock DB
-                found = MOCK_DB[inputId.trim().toUpperCase()];
-                if (!found) {
-                    alert(t('app_id_not_found_alert'));
+                // Fetch from backend using renewal_id
+                const res = await fetch(API_ENDPOINTS.getByRenewalId(inputId.trim()));
+                const data = await res.json();
+
+                if (!res.ok || !data.success) {
+                    alert(data.message || t('app_id_not_found_alert'));
                     setLoading(false);
                     return;
                 }
-            }
 
-            setStudentData(found);
-            setStep(1);
+                // Map DB fields for display
+                const app = data.application;
+                setStudentData({
+                    applicationId: app.application_id,
+                    renewalId: app.renewal_id,
+                    studentName: app.full_name,
+                    fullName: app.full_name,
+                    fatherName: app.father_name,
+                    from: app.from_place,
+                    to: app.to_place,
+                    mobile: app.mobile,
+                    email: app.email,
+                    photo: app.photo,
+                    applicationType: app.application_type,
+                    status: app.status,
+                    institutionName: app.institution_name,
+                    schoolCollegeName: app.institution_name,
+                    date_of_birth: app.date_of_birth,
+                    gender: app.gender,
+                });
+                setStep(1);
+            }
+        } catch (err) {
+            console.error('Fetch error:', err);
+            alert('Failed to fetch details. Please check your Renewal ID and try again.');
+        } finally {
             setLoading(false);
-        }, 900);
+        }
     };
 
     /* ── Step 1 → 2: Select plan ── */
     const handlePlanSelect = (plan) => {
         setSelectedPlan(plan);
+        setPaymentFlowState(PAYMENT_FLOW.PENDING);
         setStep(2);
     };
 
-    /* ── Step 2 → 3: Process payment ── */
-    const handlePayment = () => {
-        setLoading(true);
-        setTimeout(() => {
-            const passNumber = "APPTD-" + Math.floor(100000 + Math.random() * 900000);
-            const ticketNumber = "TK" + Math.floor(10000000 + Math.random() * 90000000);
-            const issueDate = new Date().toISOString();
+    /* ── Step 2: Simulated Payment (No real verification) ───────── */
+    const handlePayNow = async () => {
+        if (paymentFlowState !== PAYMENT_FLOW.PENDING) return;
 
-            const newPass = {
-                ...studentData,
-                amount: selectedPlan.amount,
-                planMonths: selectedPlan.months,
-                passNumber,
-                ticketNumber,
-                issueDate,
-                isRenewal,
-            };
+        try {
+            if (!selectedPlan) {
+                throw new Error("Please select a plan before payment.");
+            }
 
-            // Persist to localStorage
-            const existing = JSON.parse(localStorage.getItem("myPasses") || "[]");
-            localStorage.setItem("myPasses", JSON.stringify([...existing, newPass]));
+            setPaymentFlowState(PAYMENT_FLOW.PROCESSING);
 
+            await Promise.race([
+                new Promise((resolve) => setTimeout(resolve, SIMULATED_VERIFY_DELAY_MS)),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error("Payment verification timeout. Please retry.")), MAX_PROCESSING_MS)
+                )
+            ]);
+
+            const createPaymentRes = await fetch(API_ENDPOINTS.createPayment, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    applicationId: studentData?.applicationId,
+                    amount: selectedPlan?.amount,
+                    paymentMethod: "phonepay_qr",
+                    planMonths: selectedPlan?.months,
+                    isRenewal
+                })
+            });
+
+            const createPaymentData = await createPaymentRes.json();
+            if (!createPaymentRes.ok || !createPaymentData?.success || !createPaymentData?.paymentId) {
+                throw new Error(createPaymentData?.message || "Failed to initiate payment.");
+            }
+
+            const completedRes = await fetch(API_ENDPOINTS.completePayment(createPaymentData.paymentId), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    paymentStatus: "SUCCESS",
+                    transactionId: "DEMO_TXN_" + getRandom6Digits()
+                })
+            });
+
+            const completedData = await completedRes.json();
+            if (!completedRes.ok || !completedData?.success || !completedData?.pass) {
+                throw new Error(completedData?.message || "Payment completed but pass generation failed.");
+            }
+
+            const now = new Date();
+            const newPass = normalizePassFromBackend(completedData.pass, studentData);
+
+            persistPassSafely(newPass);
+
+            setPaymentId(createPaymentData.paymentId);
+            setPaymentMeta({
+                paymentId: createPaymentData.paymentId,
+                passId: completedData.pass.passNumber,
+                timestamp: now.toLocaleString(),
+                amount: completedData.pass.amount || selectedPlan?.amount || 20
+            });
             setGeneratedPass(newPass);
+            setShowQR(false);
+            setPaymentFlowState(PAYMENT_FLOW.SUCCESS);
             setStep(3);
-            setLoading(false);
-        }, 1500);
+        } catch (error) {
+            console.error("Payment simulation error:", error);
+            setPaymentFlowState(PAYMENT_FLOW.PENDING);
+            setPaymentFailed(true);
+            setFailMessage(error.message || "Payment verification failed. Please try again.");
+        }
+    };
+
+    /* ── Close failure popup & retry ── */
+    const handleRetryPayment = () => {
+        setPaymentFailed(false);
+        setFailMessage("");
+        setPaymentId(null);
+        setShowQR(false);
     };
 
     /* ── Reset ── */
@@ -143,6 +331,16 @@ const Payment = ({ mode = "new" }) => {
         setStudentData(null);
         setSelectedPlan(null);
         setGeneratedPass(null);
+        setPaymentFlowState(PAYMENT_FLOW.PENDING);
+        setPaymentMeta(null);
+        setPaymentId(null);
+        setShowQR(false);
+        setPaymentFailed(false);
+        setFailMessage("");
+    };
+
+    const handleDownloadPass = () => {
+        alert("Downloading...");
     };
 
     /* ── Titles ── */
@@ -150,8 +348,8 @@ const Payment = ({ mode = "new" }) => {
     const pageSubtitle = isRenewal
         ? t('enter_pass_to_renew')
         : t('enter_app_id_to_get_pass');
-    const inputLabel = isRenewal ? t('existing_pass_number') : t('application_id_label');
-    const inputPlaceholder = isRenewal ? "e.g. APPTD-123456" : "e.g. APP123";
+    const inputLabel = isRenewal ? t('existing_pass_number') : t('renewal_id_label');
+    const inputPlaceholder = "e.g. A1B2C3D4E5F6";
     const renewalNote = isRenewal
         ? t('renewal_note')
         : null;
@@ -179,11 +377,11 @@ const Payment = ({ mode = "new" }) => {
 
                         {isRenewal && (language === 'en' ? (
                             <div className="renewal-hint">
-                                💡 Go to <strong>My Pass</strong> to find your Pass Number (starts with APPTD-)
+                                💡 Go to <strong>My Pass</strong> to find your Renewal ID (starts with BP)
                             </div>
                         ) : (
                             <div className="renewal-hint">
-                                💡 మీ పాస్ నంబర్ కోసం <strong>నా పాస్</strong>కి వెళ్ళండి (ఇది APPTD- తో మొదలవుతుంది)
+                                💡 మీ రినూవల్ ఐడీ కోసం <strong>నా పాస్</strong>కి వెళ్ళండి (ఇది BP తో మొదలవుతుంది)
                             </div>
                         ))}
 
@@ -215,9 +413,11 @@ const Payment = ({ mode = "new" }) => {
 
                         <div className="student-preview-box">
                             <h4>{isRenewal ? t('renewing_pass_for') : t('application_details')}</h4>
-                            <div className="info-row"><strong>{t('name')}</strong><span>{studentData.studentName}</span></div>
-                            <div className="info-row"><strong>{t('college')}</strong><span>{studentData.schoolCollegeName}</span></div>
-                            <div className="info-row"><strong>{t('route')}</strong><span>{studentData.from} → {studentData.to}</span></div>
+                            <div className="info-row"><strong>{t('name')}</strong><span>{studentData.studentName || studentData.fullName || studentData.full_name}</span></div>
+                            <div className="info-row"><strong>{t('route')}</strong><span>{studentData.from || studentData.from_place} → {studentData.to || studentData.to_place}</span></div>
+                            {studentData.renewalId && (
+                                <div className="info-row"><strong>Renewal ID</strong><span style={{color:'#28a745', fontWeight:700}}>{studentData.renewalId}</span></div>
+                            )}
                             {isRenewal && studentData.passNumber && (
                                 <div className="info-row"><strong>{t('old_pass')}</strong><span>{studentData.passNumber}</span></div>
                             )}
@@ -251,7 +451,7 @@ const Payment = ({ mode = "new" }) => {
                     </div>
                 )}
 
-                {/* ── STEP 2: Payment Confirmation ── */}
+                {/* ── STEP 2: PhonePe Payment (Demo) ── */}
                 {step === 2 && selectedPlan && (
                     <div className="payment-card">
                         <h2 className="payment-title">{t('complete_payment')}</h2>
@@ -259,9 +459,8 @@ const Payment = ({ mode = "new" }) => {
 
                         <div className="student-preview-box">
                             <h4>{t('order_summary')}</h4>
-                            <div className="info-row"><strong>{t('name')}</strong><span>{studentData.studentName}</span></div>
-                            <div className="info-row"><strong>{t('route')}</strong><span>{studentData.from} → {studentData.to}</span></div>
-                            <div className="info-row"><strong>{t('college')}</strong><span>{studentData.schoolCollegeName}</span></div>
+                            <div className="info-row"><strong>{t('name')}</strong><span>{studentData.studentName || studentData.fullName || studentData.full_name}</span></div>
+                            <div className="info-row"><strong>{t('route')}</strong><span>{studentData.from || studentData.from_place} → {studentData.to || studentData.to_place}</span></div>
                             <div className="info-row"><strong>{t('plan')}</strong><span>{selectedPlan.months} {t(selectedPlan.labelKey)}</span></div>
                             {isRenewal && (
                                 <div className="info-row"><strong>{t('type')}</strong><span style={{ color: "#c46b00", fontWeight: 700 }}>🔄 {t('renewal_pass_badge')}</span></div>
@@ -277,43 +476,126 @@ const Payment = ({ mode = "new" }) => {
                             {renewalNote && <div className="summary-note">{renewalNote}</div>}
                         </div>
 
-                        {loading
-                            ? <div className="loading-spinner" />
-                            : <>
-                                <button className="payment-btn" onClick={handlePayment}>
-                                    💳 {t('pay')} ₹{selectedPlan.amount} {t('now')}
+                        {/* PhonePe QR Code Display */}
+                        <div className="qr-payment-section">
+                            <div className="qr-header">
+                                <img src="/phonepay%20QR.jpeg" alt="PhonePe QR" className="phonepe-logo-small" style={{width: '36px', height: '36px', borderRadius: '8px'}} />
+                                <h3 className="qr-title">
+                                    {language === 'te' ? 'PhonePe తో చెల్లించండి' : 'Pay with PhonePe'}
+                                </h3>
+                            </div>
+
+                            <div className="qr-amount-badge">₹{selectedPlan.amount}</div>
+
+                            <div className="qr-image-container">
+                                <img
+                                    src="/phonepay%20QR.jpeg"
+                                    alt="PhonePe QR Code"
+                                    className="qr-code-image"
+                                />
+                            </div>
+
+                            <p className="qr-instructions">
+                                {language === 'te'
+                                    ? '📱 ఈ QR కోడ్‌ను PhonePe/GPay/Paytm తో స్కాన్ చేయండి మరియు ₹' + selectedPlan.amount + ' చెల్లించండి'
+                                    : '📱 Scan this QR code using PhonePe / GPay / Paytm and pay ₹' + selectedPlan.amount
+                                }
+                            </p>
+
+                            <div className="demo-notice" style={{
+                                background: '#fff3cd', border: '1px solid #ffc107', borderRadius: '8px',
+                                padding: '10px 14px', margin: '10px 0', fontSize: '13px', color: '#856404', textAlign: 'center'
+                            }}>
+                                ⚠️ {language === 'te'
+                                    ? 'డెమో మోడ్: విజయవంతమైన చెల్లింపు నిర్ధారణ తర్వాత మాత్రమే పాస్ రూపొందించబడుతుంది.'
+                                    : 'Demo Mode: Pass is generated only after successful payment confirmation.'}
+                            </div>
+                        </div>
+
+                        <button
+                            className="payment-btn qr-confirm-btn"
+                            onClick={handlePayNow}
+                            disabled={paymentFlowState === PAYMENT_FLOW.PROCESSING || paymentFlowState === PAYMENT_FLOW.SUCCESS}
+                            style={{
+                                opacity: paymentFlowState === PAYMENT_FLOW.PROCESSING ? 0.8 : 1,
+                                cursor: paymentFlowState === PAYMENT_FLOW.PROCESSING ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            {paymentFlowState === PAYMENT_FLOW.PROCESSING ? (
+                                <span className="btn-inline-loading">
+                                    <span className="btn-spinner" />
+                                    Verifying Payment...
+                                </span>
+                            ) : (
+                                <>✅ {language === 'te' ? 'చెల్లింపు పూర్తయింది — పాస్ రూపొందించండి' : "I've Paid — Generate My Pass"}</>
+                            )}
+                        </button>
+                        <button
+                            className="payment-btn secondary"
+                            onClick={() => setStep(1)}
+                            disabled={paymentFlowState === PAYMENT_FLOW.PROCESSING}
+                        >
+                            ← {t('change_plan')}
+                        </button>
+                    </div>
+                )}
+
+                {/* ── Payment Failed Popup ── */}
+                {paymentFailed && (
+                    <div className="payment-fail-overlay">
+                        <div className="payment-fail-popup">
+                            <div className="fail-icon">❌</div>
+                            <h3 className="fail-title">
+                                {language === 'te' ? 'చెల్లింపు విఫలమైంది' : 'Payment Failed'}
+                            </h3>
+                            <p className="fail-message">{failMessage}</p>
+                            <div className="fail-actions">
+                                <button className="payment-btn" onClick={handleRetryPayment}>
+                                    🔄 {language === 'te' ? 'మళ్ళీ ప్రయత్నించు' : 'Try Again'}
                                 </button>
-                                <button className="payment-btn secondary" onClick={() => setStep(1)}>← {t('change_plan')}</button>
-                            </>
-                        }
+                                <button className="payment-btn secondary" onClick={() => { handleRetryPayment(); setStep(1); }}>
+                                    ← {language === 'te' ? 'ప్లాన్ మార్చు' : 'Change Plan'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 {/* ── STEP 3: Generated Pass ── */}
                 {step === 3 && generatedPass && (
-                    <div className="pass-preview-container">
+                    <div className="pass-preview-container transition-success">
                         <div className="success-banner">
-                            <h3>{isRenewal ? "🔄 " + t('pass_renewed_title') : "🎉 " + t('payment_successful')}</h3>
+                            <h3>Payment Successful ✅</h3>
+                            <p>Your bus pass has been generated</p>
+                            <p style={{ marginTop: "8px", fontWeight: 600 }}>Your pass is ready. You can stay here or open My Pass manually.</p>
+                        </div>
+
+                        {paymentMeta && (
+                            <div className="payment-meta-box">
+                                <div className="info-row"><strong>Payment ID</strong><span>{paymentMeta.paymentId}</span></div>
+                                <div className="info-row"><strong>Pass ID</strong><span>{paymentMeta.passId}</span></div>
+                                <div className="info-row"><strong>Date & Time</strong><span>{paymentMeta.timestamp}</span></div>
+                                <div className="info-row"><strong>Amount</strong><span>₹{paymentMeta.amount}</span></div>
+                            </div>
+                        )}
+
+                        <div className="sim-pass-meta">
+                            <h4>Bus Pass Details</h4>
                             <p>
-                                {t('pass_generated_desc')} <strong>{t('my_pass_link')}</strong>.
+                                Name: <strong>{generatedPass.studentName || generatedPass.full_name || "N/A"}</strong> | Route: <strong>{generatedPass.from || generatedPass.from_place || "N/A"} → {generatedPass.to || generatedPass.to_place || "N/A"}</strong> | Plan: <strong>{generatedPass.planMonths || 1} Month</strong> | Validity: <strong>{new Date(generatedPass.issueDate).toLocaleDateString("en-IN")} - {new Date(generatedPass.expiryDate).toLocaleDateString("en-IN")}</strong>
                             </p>
                         </div>
 
                         <BusPassCard data={generatedPass} />
 
-                        <button
-                            className="payment-btn"
-                            style={{ marginTop: "16px" }}
-                            onClick={() => navigate("/my-pass")}
-                        >
-                            🎫 {t('view_my_passes')}
+                        <button className="payment-btn" style={{ marginTop: "16px" }} onClick={handleDownloadPass}>
+                            Download Pass
                         </button>
-                        <button
-                            className="payment-btn secondary"
-                            style={{ marginTop: "10px" }}
-                            onClick={handleReset}
-                        >
-                            {isRenewal ? t('renew_another_pass') : t('pay_for_another_pass')}
+                        <button className="payment-btn" style={{ marginTop: "10px" }} onClick={() => navigate("/my-pass")}> 
+                            Open My Pass
+                        </button>
+                        <button className="payment-btn secondary" style={{ marginTop: "10px" }} onClick={() => navigate("/home")}>
+                            Go to Dashboard
                         </button>
                     </div>
                 )}

@@ -1,0 +1,464 @@
+.gd-page {
+    min-height: 100vh;
+    background-color: #f8f9fa;
+    color: #334155;
+    position: relative;
+    overflow-x: hidden;
+    padding-bottom: 60px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ── Loading ── */
+.gd-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 20px;
+}
+
+.gd-loading p { color: #64748b; font-size: 16px; }
+
+.gd-loading-spinner {
+    width: 44px; height: 44px;
+    border: 4px solid rgba(208, 28, 36, 0.1);
+    border-top-color: #d01c24;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Sub Header (below APSRTC header) ── */
+.gd-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 40px;
+    background: white;
+    border-bottom: 2px solid #d01c24;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.gd-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.gd-header-icon { font-size: 32px; }
+
+.gd-header-left h1 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.gd-header-left p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.gd-logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #d01c24;
+    border: none;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+
+.gd-logout-btn:hover {
+    background: #b5151a;
+}
+
+/* ── Menu View ── */
+.gd-menu-container {
+    max-width: 1000px;
+    margin: 60px auto;
+    padding: 0 20px;
+    text-align: center;
+}
+
+.gd-menu-title {
+    font-size: 2.2rem;
+    color: #1e293b;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.gd-menu-subtitle {
+    color: #64748b;
+    font-size: 1.1rem;
+    margin-bottom: 40px;
+}
+
+.gd-menu-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+}
+
+.gd-menu-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 30px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.gd-menu-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 25px rgba(208, 28, 36, 0.1);
+    border-color: #d01c24;
+    background: white !important; /* Prevent global purple hover */
+}
+
+.gd-card-icon {
+    font-size: 40px;
+}
+
+.gd-menu-card h3 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 20px;
+}
+
+.gd-card-badge {
+    background: #fee2e2;
+    color: #d01c24;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 50px;
+    text-transform: uppercase;
+}
+
+.gd-menu-card p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* ── Analysis View ── */
+.gd-analysis-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.gd-back-btn {
+    background: none;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 25px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.gd-back-btn:hover {
+    background: #f1f5f9;
+    color: #d01c24;
+    border-color: #d01c24;
+}
+
+.gd-analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 24px;
+}
+
+.gd-stat-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.gd-stat-header {
+    margin-bottom: 25px;
+}
+
+.gd-stat-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #1e293b;
+}
+
+.gd-total-box {
+    text-align: center;
+    padding: 24px;
+    background: #fff5f5;
+    border: 1px dashed #feb2b2;
+    border-radius: 12px;
+}
+
+.gd-total-label {
+    display: block;
+    font-size: 14px;
+    color: #e53e3e;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.gd-total-value {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #d01c24;
+}
+
+.gd-legend {
+    margin-top: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.gd-legend-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+}
+
+.gd-legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.gd-legend-label { color: #475569; }
+.gd-legend-value { font-weight: 700; color: #1e293b; }
+
+.gd-chart-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+/* SVG Chart */
+.gd-pie-svg {
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.08));
+}
+
+.gd-pie-slice {
+    transition: transform 0.3s;
+    cursor: pointer;
+}
+
+.gd-pie-slice:hover {
+    transform: scale(1.03);
+    stroke-width: 1px;
+    stroke: white;
+}
+
+.gd-pie-empty text {
+    font-family: inherit;
+}
+
+/* Table View in Passes Issuing */
+.gd-table-card {
+    grid-column: 1 / -1;
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    margin-top: 24px;
+}
+
+.gd-table-scroll {
+    overflow-x: auto;
+}
+
+.gd-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 14px;
+}
+
+.gd-table th {
+    background: #f8fafc;
+    padding: 16px;
+    color: #64748b;
+    font-weight: 600;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.gd-table td {
+    padding: 16px;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.gd-table tr:hover {
+    background: rgba(208, 28, 36, 0.02);
+}
+
+.gd-error-banner {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin: 20px 40px;
+    font-weight: 600;
+    border: 1px solid #fecaca;
+}
+
+@media (max-width: 900px) {
+    .gd-analysis-grid { grid-template-columns: 1fr; }
+    .gd-header { padding: 12px 20px; }
+}
+
+/* ── Analysis Title ── */
+.gd-analysis-title {
+    font-size: 1.6rem;
+    color: #1e293b;
+    margin-bottom: 20px;
+    font-weight: 700;
+}
+
+/* ── Total Banner ── */
+.gd-total-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.gd-total-banner span {
+    font-size: 15px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.gd-total-banner strong {
+    font-size: 1.8rem;
+    color: #d01c24;
+    font-weight: 800;
+}
+
+.gd-total-money {
+    border-left: 4px solid #10b981;
+}
+
+.gd-total-passes {
+    border-left: 4px solid #6366f1;
+}
+
+/* ── Chart Section ── */
+.gd-chart-section {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.gd-chart-wrapper {
+    flex-shrink: 0;
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Menu Card extras ── */
+.gd-menu-card-icon {
+    font-size: 44px;
+}
+
+.gd-menu-card-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    padding: 10px 20px;
+    background: #fef2f2;
+    border-radius: 8px;
+}
+
+.gd-menu-card-stat span {
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.gd-menu-card-stat strong {
+    font-size: 1.5rem;
+    color: #d01c24;
+}
+
+.gd-menu-card-arrow {
+    font-size: 22px;
+    color: #d01c24;
+    font-weight: bold;
+    margin-top: 4px;
+}
+
+/* ── Table extras ── */
+.gd-table-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.gd-table-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.gd-table-total {
+    background: #f8fafc;
+    border-top: 2px solid #e2e8f0;
+}
+
+.gd-pending {
+    color: #f59e0b;
+}
+
+.gd-rejected {
+    color: #ef4444;
+}

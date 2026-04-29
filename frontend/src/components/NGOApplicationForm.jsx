@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './NGOApplicationForm.css';
 import LogoBackButton from './LogoBackButton';
 import { useLanguage } from '../context/LanguageContext';
@@ -6,10 +6,49 @@ import { API_ENDPOINTS } from '../api/config';
 
 const NGOApplicationForm = () => {
     const { t } = useLanguage();
+    const [formData, setFormData] = useState({
+        fullName: '',
+        fatherName: '',
+        dateOfBirth: '',
+        gender: '',
+        aadharNumber: '',
+        mobileNumber: '',
+        
+        ngoName: '',
+        ngoRegistrationNumber: '',
+        ngoType: '',
+        ngoAddress: '',
+        ngoDistrict: '',
+        
+        designation: '',
+        employeeId: '',
+        joiningDate: '',
+        workLocation: '',
+        
+        houseAddress: '',
+        villageTownCity: '',
+        residentDistrict: '',
+        pincode: '',
+        
+        boardingPoint: '',
+        destination: '',
+        busDepot: '',
+        routeSelection: '',
+        
+        passType: '',
+        passDuration: '',
+        
+        declaration: false
+    });
+
     const [photo, setPhoto] = useState(null);
+    const [isPhysicallyChallenged, setIsPhysicallyChallenged] = useState(false);
     const [documents, setDocuments] = useState({
         idCardDoc: null,
-        addressProofDoc: null
+        authorizationDoc: null,
+        registrationDoc: null,
+        addressProofDoc: null,
+        disabilityCertificateDoc: null
     });
     const [showCamera, setShowCamera] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -17,15 +56,21 @@ const NGOApplicationForm = () => {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const fileInputRef = useRef(null);
-    const formRef = useRef(null);
 
-    const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => setPhoto(reader.result);
-            reader.readAsDataURL(file);
+    useEffect(() => {
+        const identifier = localStorage.getItem('userIdentifier');
+        if (identifier && /^\d+$/.test(identifier)) {
+            setFormData(prev => ({ ...prev, mobileNumber: identifier }));
+            // Add a slight delay to ensure UI reflects auto-fill
         }
+    }, []);
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
     };
 
     const handleBlur = (e) => {
@@ -36,6 +81,15 @@ const NGOApplicationForm = () => {
     const showError = (name) => {
         const input = document.querySelector(`[name="${name}"]`);
         return touched[name] && input && !input.validity.valid;
+    };
+
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => setPhoto(reader.result);
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleDocumentUpload = (e, docType) => {
@@ -76,32 +130,56 @@ const NGOApplicationForm = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.declaration) {
+            alert('Please accept the declaration');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            const form = formRef.current;
-            const formDataObj = new FormData(form);
-
-            // Required field validation
-            const requiredFields = [
-                { name: 'fullName', label: 'Full Name', section: 'Personal Details' },
-                { name: 'aadharNumber', label: 'Aadhaar Number', section: 'Personal Details' },
-                { name: 'mobileNumber', label: 'Mobile Number', section: 'Personal Details' },
-                { name: 'email', label: 'Email ID', section: 'Personal Details' },
-                { name: 'gender', label: 'Gender', section: 'Personal Details' },
-                { name: 'ngoName', label: 'NGO Name', section: 'NGO Details' },
-                { name: 'passType', label: 'Pass Type', section: 'Route Details' },
-                { name: 'fromPlace', label: 'From Place', section: 'Route Details' },
-                { name: 'toPlace', label: 'To Place', section: 'Route Details' }
-            ];
-
             const missingFields = [];
-            for (const field of requiredFields) {
-                const value = formDataObj.get(field.name);
-                if (!value || value.trim() === '') {
-                    missingFields.push(`${field.label} (${field.section})`);
-                }
-            }
+            // Personal Details
+            if (!formData.fullName.trim()) missingFields.push('Full Name');
+            if (!formData.dateOfBirth) missingFields.push('Date of Birth');
+            if (!formData.gender) missingFields.push('Gender');
+            if (!photo) missingFields.push('Passport Size Photo');
+            
+            // NGO Details
+            if (!formData.ngoName.trim()) missingFields.push('NGO Name');
+            if (!formData.ngoRegistrationNumber.trim()) missingFields.push('NGO Registration Number');
+            if (!formData.ngoType) missingFields.push('NGO Type/Category');
+            if (!formData.ngoAddress.trim()) missingFields.push('NGO Office Address');
+            if (!formData.ngoDistrict.trim()) missingFields.push('NGO District');
+            
+            // Employment Details
+            if (!formData.designation.trim()) missingFields.push('Applicant Designation');
+            if (!formData.joiningDate) missingFields.push('Date of Joining NGO');
+            if (!formData.workLocation.trim()) missingFields.push('Work Location');
+            
+            // Residential Details
+            if (!formData.houseAddress.trim()) missingFields.push('House Address');
+            if (!formData.villageTownCity.trim()) missingFields.push('Village/Town/City');
+            if (!formData.residentDistrict.trim()) missingFields.push('Residential District');
+            if (!formData.pincode.trim()) missingFields.push('PIN Code');
+            
+            // Travel Details
+            if (!formData.boardingPoint.trim()) missingFields.push('Boarding Point');
+            if (!formData.destination.trim()) missingFields.push('Destination');
+            if (!formData.busDepot.trim()) missingFields.push('Nearest Bus Depot');
+            
+            // Pass Details
+            if (!formData.passType) missingFields.push('Pass Type');
+            if (!formData.passDuration) missingFields.push('Pass Duration');
+            
+            // Contact Details
+            if (!formData.mobileNumber.trim()) missingFields.push('Mobile Number');
+            
+            // Documents
+            if (!documents.idCardDoc) missingFields.push('NGO ID Card');
+            if (!documents.authorizationDoc) missingFields.push('NGO Authorization Letter');
+            if (!documents.registrationDoc) missingFields.push('NGO Registration Certificate');
 
             if (missingFields.length > 0) {
                 alert(`Please fill in the following required fields:\n\n${missingFields.join('\n')}`);
@@ -109,43 +187,45 @@ const NGOApplicationForm = () => {
                 return;
             }
 
-            // Date validation: retirement date must be after appointment date
-            const dateOfAppointment = formDataObj.get('dateOfAppointment');
-            const dateOfRetirement = formDataObj.get('dateOfRetirement');
-            if (dateOfAppointment && dateOfRetirement) {
-                if (new Date(dateOfRetirement) <= new Date(dateOfAppointment)) {
-                    alert('Date of Retirement must be after Date of Appointment');
-                    setIsSubmitting(false);
-                    return;
-                }
-            }
-
+            // Backend Mapping (No backend change allowed - reusing existing fields)
             const payload = {
                 applicationType: 'ngo_worker',
-                fullName: formDataObj.get('fullName'),
-                fatherName: formDataObj.get('fatherName'),
-                aadharNumber: formDataObj.get('aadharNumber'),
-                dateOfBirth: formDataObj.get('dateOfBirth'),
-                mobileNumber: formDataObj.get('mobileNumber'),
-                email: formDataObj.get('email'),
-                gender: formDataObj.get('gender'),
-                ngoName: formDataObj.get('ngoName'),
-                ngoRegistrationNumber: formDataObj.get('ngoRegistrationNumber'),
-                designation: formDataObj.get('designation'),
-                appointmentDate: formDataObj.get('appointmentDate'),
-                retirementDate: formDataObj.get('retirementDate'),
-                payScale: formDataObj.get('payScale'),
-                residentialAddress: formDataObj.get('residentialAddress'),
-                ngoAddress: formDataObj.get('ngoAddress'),
-                passType: formDataObj.get('passType'),
-                fromPlace: formDataObj.get('fromPlace'),
-                toPlace: formDataObj.get('toPlace'),
-                depot: formDataObj.get('depot'),
-                validity: formDataObj.get('validity'),
-                depotDetails: formDataObj.get('depotDetails'),
+                fullName: formData.fullName,
+                fatherName: formData.fatherName,
+                gender: formData.gender,
+                dateOfBirth: formData.dateOfBirth,
+                aadharNumber: formData.aadharNumber,
+                mobile: formData.mobileNumber,
+                email: formData.email,
+                
+                ngoName: formData.ngoName,
+                ngoRegistrationNumber: formData.ngoRegistrationNumber,
+                designation: formData.designation,
+                dateOfAppointment: formData.joiningDate,
+                
+                // Combining address + district for existing ngoAddress field
+                ngoAddress: `${formData.ngoAddress}, ${formData.ngoDistrict}`,
+                
+                // Combining residential fields for existing residentialAddress field
+                residentialAddress: `${formData.houseAddress}, ${formData.villageTownCity}, ${formData.residentDistrict} - ${formData.pincode}`,
+                
+                fromPlace: formData.boardingPoint,
+                toPlace: formData.destination,
+                depotDetails: formData.busDepot,
+                via: formData.routeSelection,
+                
+                passType: formData.passType,
+                validity: formData.passDuration,
+                
+                // Document Mapping
                 photo: photo,
                 idCardDoc: documents.idCardDoc,
-                addressProofDoc: documents.addressProofDoc
+                salaryCertificateDoc: documents.authorizationDoc, // Reused for Authorization Letter
+                otherDoc: documents.registrationDoc, // Reused for Registration Certificate
+                addressProofDoc: documents.addressProofDoc,
+                
+                isPhysicallyChallenged: isPhysicallyChallenged,
+                disabilityCertificateDoc: documents.disabilityCertificateDoc
             };
 
             const response = await fetch(API_ENDPOINTS.submitApplication, {
@@ -157,11 +237,18 @@ const NGOApplicationForm = () => {
             const data = await response.json();
             if (response.ok) {
                 alert(`Application submitted successfully! Your Application ID: ${data.applicationId}`);
-                form.reset();
+                setFormData({
+                    fullName: '', fatherName: '', dateOfBirth: '', gender: '', aadharNumber: '', mobileNumber: '',
+                    ngoName: '', ngoRegistrationNumber: '', ngoType: '', ngoAddress: '', ngoDistrict: '',
+                    designation: '', employeeId: '', joiningDate: '', workLocation: '',
+                    houseAddress: '', villageTownCity: '', residentDistrict: '', pincode: '',
+                    boardingPoint: '', destination: '', busDepot: '', routeSelection: '',
+                    passType: '', passDuration: '', declaration: false
+                });
                 setPhoto(null);
-                setDocuments({ idCardDoc: null, addressProofDoc: null });
+                setDocuments({ idCardDoc: null, authorizationDoc: null, registrationDoc: null, addressProofDoc: null, disabilityCertificateDoc: null });
             } else {
-                alert(`Submission failed: ${data.message || 'Unknown error'}\n\nPlease check all required fields.`);
+                alert(`Submission failed: ${data.message || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Submission error:', error);
@@ -175,193 +262,224 @@ const NGOApplicationForm = () => {
         <div className="ngo-page-container">
             <LogoBackButton />
             <div className="ngo-form-wrapper">
-                <h2>{t('ngo_pass_title')}</h2>
-                <form ref={formRef} onSubmit={handleSubmit}>
-                    {/* PERSONAL DETAILS */}
+                <div className="form-title-bar">
+                    <h2 className="form-title">{t('ngo_pass_title')}</h2>
+                </div>
+
+                <form onSubmit={handleSubmit} className="registration-content">
+                    {/* 1. PERSONAL DETAILS */}
                     <div className="form-section">
-                        <h3>{t('applicant_details')}</h3>
+                        <h3 className="section-header">1. Personal Details (Mandatory)</h3>
                         <div className="form-grid">
                             <div className={`form-group ${showError('fullName') ? 'has-error' : ''}`}>
-                                <label>{t('full_name')} <span className="required-star">*</span></label>
-                                <input type="text" name="fullName" required pattern="[A-Za-z\s]+" title="Only letters and spaces allowed" onBlur={handleBlur} placeholder={t('enter_name')} />
-                                {showError('fullName') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid name (letters only).</span>}
-                            </div>
-                            <div className={`form-group ${showError('fatherName') ? 'has-error' : ''}`}>
-                                <label>{t('father_guardian_name')} <span className="required-star">*</span></label>
-                                <input type="text" name="fatherName" required pattern="[A-Za-z\s]+" title="Only letters and spaces allowed" onBlur={handleBlur} placeholder={t('father_guardian_name')} />
-                                {showError('fatherName') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid name (letters only).</span>}
+                                <label>Full Name of Applicant <span className="required-star">*</span></label>
+                                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required pattern="[A-Za-z\s]+" onBlur={handleBlur} placeholder="Enter full name" />
                             </div>
                             <div className={`form-group ${showError('dateOfBirth') ? 'has-error' : ''}`}>
-                                <label>{t('date_of_birth')} <span className="required-star">*</span></label>
-                                <input type="date" name="dateOfBirth" max={new Date().toISOString().split('T')[0]} onBlur={handleBlur} required />
-                                {showError('dateOfBirth') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please select a valid date of birth.</span>}
+                                <label>Date of Birth <span className="required-star">*</span></label>
+                                <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} max={new Date().toISOString().split('T')[0]} onBlur={handleBlur} required />
                             </div>
                             <div className={`form-group ${showError('gender') ? 'has-error' : ''}`}>
-                                <label>{t('gender')} <span className="required-star">*</span></label>
-                                <select name="gender" required defaultValue="" onBlur={handleBlur}>
-                                    <option value="" disabled>{t('select_gender')}</option>
-                                    <option value="Male">{t('male')}</option>
-                                    <option value="Female">{t('female')}</option>
-                                    <option value="Other">{t('other')}</option>
+                                <label>Gender <span className="required-star">*</span></label>
+                                <select name="gender" value={formData.gender} onChange={handleChange} required onBlur={handleBlur}>
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
                                 </select>
-                                {showError('gender') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please select a gender.</span>}
                             </div>
-                            <div className={`form-group ${showError('aadharNumber') ? 'has-error' : ''}`}>
-                                <label>{t('aadhar_number')} <span className="required-star">*</span></label>
-                                <input type="text" name="aadharNumber" pattern="\d{12}" title="12 digit Aadhaar number" maxLength="12" onBlur={handleBlur} required placeholder={t('enter_aadhar')} />
-                                {showError('aadharNumber') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Aadhaar must be exactly 12 digits.</span>}
-                            </div>
-                            <div className={`form-group ${showError('mobileNumber') ? 'has-error' : ''}`}>
-                                <label>{t('mobile_no')} <span className="required-star">*</span></label>
-                                <input type="tel" name="mobileNumber" pattern="[6-9]\d{9}" title="10 digit mobile number starting with 6-9" maxLength="10" onBlur={handleBlur} required placeholder={t('enter_mobile')} />
-                                {showError('mobileNumber') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Mobile number must be 10 digits.</span>}
-                            </div>
-                            <div className={`form-group ${showError('email') ? 'has-error' : ''}`}>
-                                <label>{t('email')} <span className="required-star">*</span></label>
-                                <input type="email" name="email" required onBlur={handleBlur} placeholder={t('email')} />
-                                {showError('email') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid email address.</span>}
+                        </div>
+                        <div className="photo-upload-section" style={{ marginTop: '20px' }}>
+                            <label>Recent Passport Size Photo <span className="required-star">*</span></label>
+                            <div className="photo-box-wrapper">
+                                <div className="photo-box">
+                                    {photo ? <img src={photo} alt="Preview" /> : <img src="photo-spec.png" alt="No photo" style={{ opacity: 0.2 }} />}
+                                </div>
+                                <div className="photo-controls">
+                                    <button type="button" className="photo-action-btn" onClick={() => fileInputRef.current.click()}>Upload Photo</button>
+                                    <button type="button" className="camera-btn" onClick={startCamera}>Use Camera</button>
+                                    <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileUpload} />
+                                </div>
                             </div>
                         </div>
                     </div>
 
+                    {/* 2. NGO ORGANIZATION DETAILS */}
                     <div className="form-section">
-                        <h3>{t('ngo_details')}</h3>
+                        <h3 className="section-header">2. NGO Organization Details (Mandatory)</h3>
                         <div className="form-grid">
                             <div className="form-group full-width">
-                                <label>{t('ngo_org_name')}</label>
-                                <input type="text" name="ngoName" required />
+                                <label>NGO Name <span className="required-star">*</span></label>
+                                <input type="text" name="ngoName" value={formData.ngoName} onChange={handleChange} required />
                             </div>
                             <div className="form-group">
-                                <label>{t('reg_no')}</label>
-                                <input type="text" name="ngoRegistrationNumber" required />
+                                <label>NGO Registration Number <span className="required-star">*</span></label>
+                                <input type="text" name="ngoRegistrationNumber" value={formData.ngoRegistrationNumber} onChange={handleChange} required />
                             </div>
                             <div className="form-group">
-                                <label>{t('applicant_designation_ngo')}</label>
-                                <input type="text" name="designation" required />
+                                <label>NGO Type / Category <span className="required-star">*</span></label>
+                                <select name="ngoType" value={formData.ngoType} onChange={handleChange} required>
+                                    <option value="">Select Category</option>
+                                    <option value="Social Welfare">Social Welfare</option>
+                                    <option value="Environmental">Environmental</option>
+                                    <option value="Healthcare">Healthcare</option>
+                                    <option value="Education">Education</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div className="form-group full-width">
+                                <label>NGO Office Address <span className="required-star">*</span></label>
+                                <input type="text" name="ngoAddress" value={formData.ngoAddress} onChange={handleChange} required />
                             </div>
                             <div className="form-group">
-                                <label>{t('appointment_date')} <span className="required-star">*</span></label>
-                                <input type="date" name="appointmentDate" required />
-                            </div>
-                            <div className="form-group">
-                                <label>{t('retirement_date')}</label>
-                                <input type="date" name="retirementDate" />
-                            </div>
-                            <div className="form-group">
-                                <label>{t('pay_scale')}</label>
-                                <input type="text" name="payScale" placeholder="Enter scale pay (e.g., 25000-50000)" />
+                                <label>District <span className="required-star">*</span></label>
+                                <input type="text" name="ngoDistrict" value={formData.ngoDistrict} onChange={handleChange} required />
                             </div>
                         </div>
                     </div>
 
-                    {/* ADDRESS */}
+                    {/* 3. EMPLOYMENT DETAILS */}
                     <div className="form-section">
-                        <h3>{t('address_details')}</h3>
-                        <div className="form-group full-width">
-                            <label>{t('door_no_street')}</label>
-                            <textarea name="residentialAddress" required rows="3" placeholder={t('door_no_street')}></textarea>
-                        </div>
+                        <h3 className="section-header">3. Employment Details (Mandatory)</h3>
                         <div className="form-grid">
                             <div className="form-group">
-                                <label>{t('mandal_district')}</label>
-                                <input type="text" name="mandalDistrict" required placeholder={t('mandal_district')} />
+                                <label>Applicant Designation in NGO <span className="required-star">*</span></label>
+                                <input type="text" name="designation" value={formData.designation} onChange={handleChange} required />
                             </div>
                             <div className="form-group">
-                                <label>{t('village_town')}</label>
-                                <input type="text" name="villageTown" required placeholder={t('village_town')} />
+                                <label>Employee / Volunteer ID (if available)</label>
+                                <input type="text" name="employeeId" value={formData.employeeId} onChange={handleChange} />
                             </div>
                             <div className="form-group">
-                                <label>{t('pincode')}</label>
-                                <input type="text" name="pincode" pattern="\d{6}" title="6 digit pincode" maxLength="6" required placeholder={t('pincode')} />
+                                <label>Date of Joining NGO <span className="required-star">*</span></label>
+                                <input type="date" name="joiningDate" value={formData.joiningDate} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Work Location <span className="required-star">*</span></label>
+                                <input type="text" name="workLocation" value={formData.workLocation} onChange={handleChange} required />
                             </div>
                         </div>
                     </div>
 
-                    {/* DOCUMENT UPLOAD */}
+                    {/* 4. RESIDENTIAL ADDRESS */}
                     <div className="form-section">
-                        <h3>{t('documents_upload')}</h3>
+                        <h3 className="section-header">4. Residential Address (Mandatory)</h3>
                         <div className="form-grid">
-                            <div className="form-group file-upload" style={{ gridColumn: '1 / -1' }}>
-                                <label>{t('upload_ngo_id_reg')} <span className="required-star">*</span></label>
-                                <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'idCardDoc')} />
+                            <div className="form-group full-width">
+                                <label>House Address <span className="required-star">*</span></label>
+                                <input type="text" name="houseAddress" value={formData.houseAddress} onChange={handleChange} required />
                             </div>
-                            <div className="form-group file-upload">
-                                <label>{t('upload_address_proof')} <span className="required-star">*</span></label>
-                                <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'addressProofDoc')} />
+                            <div className="form-group">
+                                <label>Village / Town / City <span className="required-star">*</span></label>
+                                <input type="text" name="villageTownCity" value={formData.villageTownCity} onChange={handleChange} required />
                             </div>
-                            <div className="form-group file-upload">
-                                <label>{t('upload_aadhar_proof')} <span className="required-star">*</span></label>
-                                <input type="file" accept="image/*,.pdf" required />
+                            <div className="form-group">
+                                <label>District <span className="required-star">*</span></label>
+                                <input type="text" name="residentDistrict" value={formData.residentDistrict} onChange={handleChange} required />
                             </div>
-                            <div className="form-group photo-upload-container" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
-                                <label style={{ marginBottom: '15px' }}>{t('applicant_photo')}</label>
-                                <div className="photo-box-wrapper">
-                                    <span className="dim-label dim-width">{t('photo_width_label')}</span>
-                                    <div className="photo-box">
-                                        {photo ? <img src={photo} alt="Preview" /> : <img src="photo-spec.png" alt="No photo" style={{ opacity: 0.2 }} />}
-                                    </div>
-                                    <span className="dim-label dim-height">{t('photo_height_label')}</span>
+                            <div className="form-group">
+                                <label>PIN Code <span className="required-star">*</span></label>
+                                <input type="text" name="pincode" value={formData.pincode} onChange={handleChange} pattern="\d{6}" maxLength="6" required />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 5. TRAVEL DETAILS */}
+                    <div className="form-section">
+                        <h3 className="section-header">5. Travel Details (Mandatory)</h3>
+                        <div className="form-grid">
+                            <div className="form-group">
+                                <label>Boarding Point <span className="required-star">*</span></label>
+                                <input type="text" name="boardingPoint" value={formData.boardingPoint} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Destination (NGO Work Location) <span className="required-star">*</span></label>
+                                <input type="text" name="destination" value={formData.destination} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Nearest Bus Depot <span className="required-star">*</span></label>
+                                <input type="text" name="busDepot" value={formData.busDepot} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Route Selection</label>
+                                <input type="text" name="routeSelection" value={formData.routeSelection} onChange={handleChange} placeholder="e.g. via School Road" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 6. PASS DETAILS */}
+                    <div className="form-section">
+                        <h3 className="section-header">6. Pass Details (Mandatory)</h3>
+                        <div className="form-grid">
+                            <div className="form-group">
+                                <label>Pass Type <span className="required-star">*</span></label>
+                                <select name="passType" value={formData.passType} onChange={handleChange} required>
+                                    <option value="">Select Pass</option>
+                                    <option value="Ordinary">Ordinary</option>
+                                    <option value="Metro">Metro</option>
+                                    <option value="City">City</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Pass Duration <span className="required-star">*</span></label>
+                                <select name="passDuration" value={formData.passDuration} onChange={handleChange} required>
+                                    <option value="">Select Duration</option>
+                                    <option value="Monthly">Monthly</option>
+                                    <option value="Quarterly">Quarterly</option>
+                                    <option value="Annual">Annual</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 7. CONTACT DETAILS */}
+                    <div className="form-section">
+                        <h3 className="section-header">7. Contact Details (Mandatory)</h3>
+                        <div className="form-grid">
+                            <div className={`form-group full-width ${showError('mobileNumber') ? 'has-error' : ''}`}>
+                                <label>Registered Mobile Number <span className="required-star">*</span></label>
+                                <div className="mobile-prefix">
+                                    <span>+91</span>
+                                    <input type="tel" name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} />
                                 </div>
-                                <button type="button" className="photo-action-btn" onClick={() => fileInputRef.current.click()}>
-                                    {t('upload_capture_photo')} *
-                                </button>
-                                <button type="button" style={{ marginTop: '5px', fontSize: '0.8rem', background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', textDecoration: 'underline' }} onClick={startCamera}>
-                                    {t('use_camera')}
-                                </button>
-                                <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileUpload} />
-                                <p className="photo-help-text">
-                                    {t('photo_spec_text')}
-                                </p>
+                                <small style={{ color: '#666', marginTop: '5px', display: 'block' }}>Pre-filled from your login. You can edit if needed.</small>
                             </div>
                         </div>
                     </div>
 
-                    {/* PASS DETAILS */}
+                    {/* 8. NGO VERIFICATION DOCUMENTS */}
                     <div className="form-section">
-                        <h3>{t('pass_requirement')}</h3>
+                        <h3 className="section-header">8. NGO Verification Documents (Mandatory)</h3>
                         <div className="form-grid">
-                            <div className="form-group">
-                                <label>{t('pass_type')}</label>
-                                <select name="passType" required defaultValue="">
-                                    <option value="" disabled>{t('select_pass')}</option>
-                                    <option value="Ordinary">{t('ordinary')}</option>
-                                    <option value="Metro">{t('metro')}</option>
-                                    <option value="City">{t('city')}</option>
-                                </select>
+                            <div className="form-group full-width">
+                                <label>NGO ID Card <span className="required-star">*</span></label>
+                                <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'idCardDoc')} />
+                                {documents.idCardDoc && <span className="upload-success">✓ File Selected</span>}
                             </div>
-                            <div className={`form-group ${showError('fromPlace') ? 'has-error' : ''}`}>
-                                <label>{t('from_place')} <span className="required-star">*</span></label>
-                                <input type="text" name="fromPlace" required onBlur={handleBlur} placeholder={t('starting_point')} />
-                                {showError('fromPlace') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Starting point is required.</span>}
+                            <div className="form-group full-width">
+                                <label>NGO Authorization Letter / Employment Certificate <span className="required-star">*</span></label>
+                                <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'authorizationDoc')} />
+                                {documents.authorizationDoc && <span className="upload-success">✓ File Selected</span>}
                             </div>
-                            <div className={`form-group ${showError('toPlace') ? 'has-error' : ''}`}>
-                                <label>{t('to_place')} <span className="required-star">*</span></label>
-                                <input type="text" name="toPlace" required onBlur={handleBlur} placeholder={t('to_place')} />
-                                {showError('toPlace') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Destination is required.</span>}
+                            <div className="form-group full-width">
+                                <label>NGO Registration Certificate (organization proof) <span className="required-star">*</span></label>
+                                <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'registrationDoc')} />
+                                {documents.registrationDoc && <span className="upload-success">✓ File Selected</span>}
                             </div>
-                            <div className="form-group">
-                                <label>{t('validity')}</label>
-                                <select name="validity" required defaultValue="">
-                                    <option value="" disabled>{t('select_validity')}</option>
-                                    <option value="Monthly">{t('monthly')}</option>
-                                    <option value="Quarterly">{t('quarterly')}</option>
-                                    <option value="Half-Yearly">{t('half_yearly')}</option>
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>{t('depot')} <span className="required-star">*</span></label>
-                                <input type="text" name="depot" required placeholder={t('depot')} />
+                            <div className="form-group full-width">
+                                <label>Address Proof (Optional)</label>
+                                <input type="file" accept="image/*,.pdf" onChange={(e) => handleDocumentUpload(e, 'addressProofDoc')} />
                             </div>
                         </div>
                     </div>
 
-                    {/* DECLARATION */}
-                    <div className="form-section declaration">
-                        <h3>{t('declaration')}</h3>
-                        <label className="checkbox-label">
-                            <input type="checkbox" required />
-                            <span>{t('ngo_declaration_text')}</span>
-                        </label>
+                    {/* 9. DECLARATION */}
+                    <div className="form-section declaration-section">
+                        <h3 className="section-header">9. Declaration (Mandatory)</h3>
+                        <div className="checkbox-group">
+                            <input type="checkbox" name="declaration" checked={formData.declaration} onChange={handleChange} required />
+                            <label><strong>I hereby declare that all the information provided above is true and correct to the best of my knowledge.</strong> <span className="required-star">*</span></label>
+                        </div>
                     </div>
 
                     <div className="form-submit-container">
@@ -375,7 +493,7 @@ const NGOApplicationForm = () => {
             {showCamera && (
                 <div className="camera-modal">
                     <div className="camera-content">
-                        <video ref={videoRef} autoPlay style={{ width: '100%', borderRadius: '8px' }} />
+                        <video ref={videoRef} autoPlay style={{ width: '100%', borderRadius: '16px', marginBottom: '25px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.2)' }} />
                         <canvas ref={canvasRef} width="320" height="240" style={{ display: 'none' }} />
                         <div className="camera-actions">
                             <button type="button" onClick={capturePhoto} className="capture-btn">{t('capture')}</button>

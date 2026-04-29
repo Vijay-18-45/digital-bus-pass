@@ -36,26 +36,27 @@ export const initializeDatabase = async () => {
         await connection.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                phone VARCHAR(15),
+                email VARCHAR(255) UNIQUE,
+                phone VARCHAR(20) UNIQUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login TIMESTAMP NULL
             )
         `);
 
-        // Create OTPs table
+        // Create OTPs table (identifier can be email or phone)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS otps (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                email VARCHAR(255) NOT NULL,
+                identifier VARCHAR(255) NOT NULL,
                 otp VARCHAR(6) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 expires_at TIMESTAMP NOT NULL,
                 is_used BOOLEAN DEFAULT FALSE,
-                INDEX idx_email (email),
+                INDEX idx_identifier (identifier),
                 INDEX idx_expires (expires_at)
             )
         `);
+
 
         // BASE APPLICATIONS TABLE (Common Fields Only - No NULL waste)
         await connection.query(`
@@ -93,6 +94,33 @@ export const initializeDatabase = async () => {
                 INDEX idx_type (application_type)
             )
         `);
+
+        // Add renewal_id column if it doesn't exist (migration for existing databases)
+        try {
+            await connection.query(`
+                ALTER TABLE applications ADD COLUMN renewal_id VARCHAR(30) UNIQUE DEFAULT NULL AFTER status
+            `);
+            console.log('✅ Added renewal_id column to applications');
+        } catch (e) {
+            // Column already exists, ignore
+            if (e.code !== 'ER_DUP_FIELDNAME') {
+                console.log('ℹ️ renewal_id column already exists');
+            }
+        }
+
+        // Backfill renewal_id for any approved applications that don't have one
+        const [missingRenewal] = await connection.query(
+            "SELECT application_id FROM applications WHERE status = 'approved' AND renewal_id IS NULL"
+        );
+        if (missingRenewal.length > 0) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            for (const row of missingRenewal) {
+                let rid = '';
+                for (let i = 0; i < 12; i++) rid += chars.charAt(Math.floor(Math.random() * chars.length));
+                await connection.query('UPDATE applications SET renewal_id = ? WHERE application_id = ?', [rid, row.application_id]);
+            }
+            console.log(`✅ Backfilled ${missingRenewal.length} approved applications with renewal IDs`);
+        }
 
         // STUDENT ABOVE SSC - Type-specific fields only
         await connection.query(`
@@ -235,15 +263,23 @@ export const initializeDatabase = async () => {
         await connection.query(`
             CREATE TABLE IF NOT EXISTS passes (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                pass_id VARCHAR(20) UNIQUE NOT NULL,
+                pass_number VARCHAR(20) UNIQUE NOT NULL,
+                ticket_number VARCHAR(20) UNIQUE,
                 application_id VARCHAR(20) NOT NULL,
-                pass_type VARCHAR(50),
-                valid_from DATE NOT NULL,
-                valid_until DATE NOT NULL,
+                holder_name VARCHAR(100),
+                institution_name VARCHAR(200),
+                from_place VARCHAR(100),
+                to_place VARCHAR(100),
+                photo LONGTEXT,
+                plan_months INT DEFAULT 1,
+                amount DECIMAL(10,2),
+                issue_date DATE NOT NULL,
+                expiry_date DATE NOT NULL,
+                is_renewal BOOLEAN DEFAULT FALSE,
                 status ENUM('active', 'expired', 'cancelled', 'suspended') DEFAULT 'active',
-                issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (application_id) REFERENCES applications(application_id) ON DELETE CASCADE,
-                INDEX idx_pass_id (pass_id),
+                INDEX idx_pass_number (pass_number),
                 INDEX idx_status (status)
             )
         `);
@@ -254,7 +290,10 @@ export const initializeDatabase = async () => {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 payment_id VARCHAR(30) UNIQUE NOT NULL,
                 application_id VARCHAR(20) NOT NULL,
+                pass_number VARCHAR(20) NULL,
                 amount DECIMAL(10, 2) NOT NULL,
+                plan_months INT DEFAULT 1,
+                is_renewal BOOLEAN DEFAULT FALSE,
                 payment_method VARCHAR(50),
                 transaction_id VARCHAR(100),
                 status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
@@ -262,9 +301,60 @@ export const initializeDatabase = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (application_id) REFERENCES applications(application_id) ON DELETE CASCADE,
                 INDEX idx_payment_id (payment_id),
+                INDEX idx_pass_number (pass_number),
                 INDEX idx_status (status)
             )
         `);
+
+        // RENEWAL PAYMENTS TABLE (separate ledger for all renewal transactions)
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS renewal_payments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                payment_id VARCHAR(30) UNIQUE NOT NULL,
+                application_id VARCHAR(20) NOT NULL,
+                pass_number VARCHAR(20) NULL,
+                amount DECIMAL(10, 2) NOT NULL,
+                plan_months INT DEFAULT 1,
+                is_renewal BOOLEAN DEFAULT TRUE,
+                payment_method VARCHAR(50),
+                transaction_id VARCHAR(100),
+                status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+                paid_at TIMESTAMP NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (application_id) REFERENCES applications(application_id) ON DELETE CASCADE,
+                INDEX idx_payment_id (payment_id),
+                INDEX idx_pass_number (pass_number),
+                INDEX idx_status (status)
+            )
+        `);
+
+        // Add plan_months and is_renewal columns if they don't exist (migration for existing tables)
+        try {
+            await connection.query(`ALTER TABLE payments ADD COLUMN plan_months INT DEFAULT 1 AFTER amount`);
+        } catch (e) { /* column already exists */ }
+        try {
+            await connection.query(`ALTER TABLE payments ADD COLUMN is_renewal BOOLEAN DEFAULT FALSE AFTER plan_months`);
+        } catch (e) { /* column already exists */ }
+        try {
+            await connection.query(`ALTER TABLE payments ADD COLUMN pass_number VARCHAR(20) NULL AFTER application_id`);
+        } catch (e) { /* column already exists */ }
+        try {
+            await connection.query(`ALTER TABLE payments ADD INDEX idx_pass_number (pass_number)`);
+        } catch (e) { /* index already exists */ }
+
+        // Ensure renewal_payments schema for existing databases
+        try {
+            await connection.query(`ALTER TABLE renewal_payments ADD COLUMN pass_number VARCHAR(20) NULL AFTER application_id`);
+        } catch (e) { /* column already exists */ }
+        try {
+            await connection.query(`ALTER TABLE renewal_payments ADD COLUMN plan_months INT DEFAULT 1 AFTER amount`);
+        } catch (e) { /* column already exists */ }
+        try {
+            await connection.query(`ALTER TABLE renewal_payments ADD COLUMN is_renewal BOOLEAN DEFAULT TRUE AFTER plan_months`);
+        } catch (e) { /* column already exists */ }
+        try {
+            await connection.query(`ALTER TABLE renewal_payments ADD INDEX idx_pass_number (pass_number)`);
+        } catch (e) { /* index already exists */ }
 
         connection.release();
         console.log('✅ All normalized tables created/verified');
@@ -606,14 +696,15 @@ export const verifyOTP = async (email, otp) => {
 // PASS OPERATIONS
 // =========================================
 
-export const createPass = async (applicationId, passType, validFrom, validUntil) => {
-    const passId = 'PASS' + Date.now().toString(36).toUpperCase();
+export const createPass = async (applicationId, holderName, fromPlace, toPlace, planMonths, amount, issueDate, expiryDate) => {
+    const passNumber = 'APPTD-' + Math.floor(100000 + Math.random() * 900000);
+    const ticketNumber = 'TK' + Math.floor(10000000 + Math.random() * 90000000);
     await pool.query(
-        `INSERT INTO passes (pass_id, application_id, pass_type, valid_from, valid_until)
-         VALUES (?, ?, ?, ?, ?)`,
-        [passId, applicationId, passType, validFrom, validUntil]
+        `INSERT INTO passes (pass_number, ticket_number, application_id, holder_name, from_place, to_place, plan_months, amount, issue_date, expiry_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [passNumber, ticketNumber, applicationId, holderName, fromPlace, toPlace, planMonths, amount, issueDate, expiryDate]
     );
-    return passId;
+    return { passNumber, ticketNumber };
 };
 
 export const getPassByApplication = async (applicationId) => {
@@ -646,4 +737,19 @@ export const updatePaymentStatus = async (paymentId, status, transactionId = nul
     );
 };
 
+// Auto-expire passes that have passed their expiry_date
+export const autoExpirePasses = async () => {
+    try {
+        const [result] = await pool.query(
+            `UPDATE passes SET status = 'expired' WHERE status = 'active' AND expiry_date < CURDATE()`
+        );
+        if (result.affectedRows > 0) {
+            console.log(`✅ Auto-expired ${result.affectedRows} pass(es)`);
+        }
+    } catch (error) {
+        console.error('❌ Auto-expire passes error:', error.message);
+    }
+};
+
 export default pool;
+

@@ -13,12 +13,19 @@ import UpdateDetails from "./components/UpdateDetails";
 import Payment from "./components/Payment";
 import MyPass from "./components/MyPass";
 import AdminDashboard from "./components/AdminDashboard";
+import AdminLogin from "./components/AdminLogin";
+import GovLogin from "./components/GovLogin";
+import GovDashboard from "./components/GovDashboard";
+import TeluguVoiceHelper from "./components/TeluguVoiceHelper";
 
 function App() {
   return (
-    <Routes>
+    <>
+      <TeluguVoiceHelper />
+      <Routes>
       <Route path="/" element={<EmailOtp />} />
       <Route path="/home" element={<Home />} />
+      <Route path="/user-dashboard" element={<Home />} />
       <Route path="/above-ssc" element={<AboveSSCForm />} />
       <Route path="/below-ssc" element={<BelowSSCForm />} />
       <Route path="/citizen-form" element={<CitizenForm />} />
@@ -31,8 +38,17 @@ function App() {
       <Route path="/payment" element={<Payment mode="new" />} />
       <Route path="/renewal" element={<Payment mode="renewal" />} />
       <Route path="/my-pass" element={<MyPass />} />
+
+      {/* Admin & Gov Login Routes */}
+      <Route path="/admin" element={<AdminLogin />} />
+      <Route path="/admin-login" element={<AdminLogin />} />
+      <Route path="/gov-login" element={<GovLogin />} />
+
+      {/* Dashboard Routes */}
       <Route path="/admin-dashboard" element={<AdminDashboard />} />
+      <Route path="/gov-dashboard" element={<GovDashboard />} />
     </Routes>
+    </>
   );
 }
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Header from './header';
 
 const AdminDashboard = () => {
     const [applications, setApplications] = useState([]);
@@ -17,7 +18,7 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         if (!depoName) {
-            navigate('/');
+            navigate('/admin-login');
             return;
         }
 
@@ -59,9 +60,11 @@ const AdminDashboard = () => {
     }, [statusFilter, applications]);
 
     const handleLogout = () => {
-        localStorage.removeItem('adminDepo');
-        localStorage.removeItem('adminId');
-        navigate('/');
+        if (window.confirm('Are you sure you want to logout?')) {
+            localStorage.removeItem('adminDepo');
+            localStorage.removeItem('adminId');
+            navigate('/');
+        }
     };
 
     const handleUpdateStatus = async (appId, status) => {
@@ -76,8 +79,12 @@ const AdminDashboard = () => {
             });
             const data = await res.json();
             if (data.success) {
-                // Update applications list
-                const updatedApps = applications.map(a => a.application_id === appId ? { ...a, status } : a);
+                // Update applications list with renewal_id if approved
+                const updatedApps = applications.map(a => 
+                    a.application_id === appId 
+                        ? { ...a, status, ...(data.renewal_id ? { renewal_id: data.renewal_id } : {}) } 
+                        : a
+                );
                 setApplications(updatedApps);
                 
                 // Update stats
@@ -87,7 +94,20 @@ const AdminDashboard = () => {
                 setStats({ pending, approved, rejected, total: updatedApps.length });
                 
                 setSelectedApp(null);
-                alert(`Success! User has been notified that their application is ${status}.`);
+
+                if (status === 'approved' && data.renewal_id) {
+                    alert(
+                        `✅ Application APPROVED!\n\n` +
+                        `📋 Application ID: ${data.application_id}\n` +
+                        `🔑 Renewal ID: ${data.renewal_id}\n\n` +
+                        `⚠️ Please note down this Renewal ID and share it with the applicant.\n` +
+                        `The applicant has also been notified via email with these details.`
+                    );
+                } else if (status === 'rejected') {
+                    alert(`❌ Application REJECTED.\nThe applicant has been notified via email.`);
+                } else {
+                    alert(`Application status updated to ${status}.`);
+                }
             } else {
                 alert(data.message || 'Failed to update status');
             }
@@ -101,15 +121,25 @@ const AdminDashboard = () => {
     const renderDocument = (title, src) => {
         if (!src) return null;
 
-        const isImage = src.startsWith('data:image') || src.match(/\.(jpeg|jpg|gif|png)$/) != null;
+        const value = String(src).trim();
+        const isImage = value.startsWith('data:image') || /\.(jpeg|jpg|gif|png)(\?|#|$)/i.test(value);
+        const isPdf = value.startsWith('data:application/pdf') || /\.pdf(\?|#|$)/i.test(value);
+
         return (
             <div style={styles.imageBox}>
                 <p><strong>{title}</strong></p>
-                {isImage ? (
-                    <img src={src} style={styles.thumbnail} alt={title} />
-                ) : (
-                    <a href={src} target="_blank" rel="noreferrer" style={styles.docLink}>View Document</a>
+                {isImage && (
+                    <img src={value} style={styles.thumbnail} alt={title} />
                 )}
+                {isPdf && (
+                    <object data={value} type="application/pdf" style={styles.pdfPreview}>
+                        <p style={{ margin: '8px 0', color: '#666' }}>PDF preview unavailable in this browser.</p>
+                    </object>
+                )}
+                {!isImage && !isPdf && (
+                    <p style={styles.docMeta}>Document uploaded</p>
+                )}
+                <a href={value} target="_blank" rel="noreferrer" style={styles.docLink}>Open Document</a>
             </div>
         );
     };
@@ -124,13 +154,14 @@ const AdminDashboard = () => {
 
     return (
         <div style={styles.dashboardContainer}>
-            <header style={styles.header}>
+            <Header />
+            <div style={styles.subHeader}>
                 <div>
                     <h1 style={styles.heading}>Admin Dashboard - Depot: {depoName}</h1>
                     <p style={styles.subtitle}>Welcome back, {adminId}</p>
                 </div>
                 <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
-            </header>
+            </div>
 
             {error && <div style={styles.errorBanner}>{error}</div>}
 
@@ -323,9 +354,10 @@ const AdminDashboard = () => {
                                 {renderDocument('Aadhar Proof', selectedApp.aadhar_proof_doc)}
                                 {renderDocument('Address Proof', selectedApp.address_proof_doc)}
                                 {renderDocument('Salary Certificate', selectedApp.salary_certificate_doc)}
+                                {renderDocument('Study Certificate', selectedApp.study_certificate_doc)}
                                 {renderDocument('Other Document', selectedApp.other_doc)}
 
-                                {(!selectedApp.photo && !selectedApp.id_card_doc && !selectedApp.aadhar_proof_doc) && (
+                                {(!selectedApp.photo && !selectedApp.id_card_doc && !selectedApp.aadhar_proof_doc && !selectedApp.address_proof_doc && !selectedApp.salary_certificate_doc && !selectedApp.study_certificate_doc && !selectedApp.other_doc) && (
                                     <p style={{ color: '#888' }}>No documents uploaded.</p>
                                 )}
                             </div>
@@ -350,8 +382,15 @@ const AdminDashboard = () => {
                                     </button>
                                 </>
                             ) : (
-                                <div style={{ fontWeight: 'bold', color: selectedApp.status === 'approved' ? '#27ae60' : '#e74c3c' }}>
-                                    This application has already been {selectedApp.status.toUpperCase()}.
+                                <div>
+                                    <div style={{ fontWeight: 'bold', color: selectedApp.status === 'approved' ? '#27ae60' : '#e74c3c' }}>
+                                        This application has already been {selectedApp.status.toUpperCase()}.
+                                    </div>
+                                    {selectedApp.status === 'approved' && selectedApp.renewal_id && (
+                                        <div style={{ marginTop: '10px', padding: '10px 15px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '14px' }}>
+                                            <strong>🔑 Renewal ID:</strong> <span style={{ color: '#e31e24', fontWeight: 'bold', fontSize: '16px' }}>{selectedApp.renewal_id}</span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             <button
@@ -390,6 +429,14 @@ const styles = {
         backgroundColor: '#ffffff',
         boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
     },
+    subHeader: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '16px 40px',
+        backgroundColor: '#ffffff',
+        borderBottom: '2px solid #d01c24',
+    },
     heading: {
         margin: 0,
         fontSize: '24px',
@@ -403,9 +450,9 @@ const styles = {
     logoutBtn: {
         padding: '10px 20px',
         borderRadius: '6px',
-        border: '1px solid #dcdcdc',
-        backgroundColor: '#fff',
-        color: '#333',
+        border: 'none',
+        backgroundColor: '#d01c24',
+        color: '#fff',
         fontWeight: '600',
         cursor: 'pointer',
         transition: 'background-color 0.2s',
@@ -578,6 +625,19 @@ const styles = {
         borderRadius: '4px',
         marginTop: '10px'
     },
+    pdfPreview: {
+        width: '100%',
+        height: '180px',
+        marginTop: '10px',
+        border: '1px solid #dbe5ef',
+        borderRadius: '4px',
+        backgroundColor: '#fff'
+    },
+    docMeta: {
+        marginTop: '10px',
+        fontSize: '13px',
+        color: '#64748b'
+    },
     docLink: {
         display: 'inline-block',
         marginTop: '10px',
@@ -652,9 +712,9 @@ const styles = {
     },
     filterBtnActive: {
         padding: '8px 16px',
-        border: '1px solid #3498db',
+        border: '1px solid #d01c24',
         borderRadius: '6px',
-        backgroundColor: '#3498db',
+        backgroundColor: '#d01c24',
         color: '#fff',
         cursor: 'pointer',
         fontSize: '14px',

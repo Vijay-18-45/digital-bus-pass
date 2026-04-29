@@ -7,13 +7,16 @@ import { API_ENDPOINTS } from '../api/config';
 const CitizenForm = () => {
     const { t } = useLanguage();
     const [photo, setPhoto] = useState(null);
+    const [isPhysicallyChallenged, setIsPhysicallyChallenged] = useState(false);
     const [documents, setDocuments] = useState({
         idCardDoc: null,
-        addressProofDoc: null
+        addressProofDoc: null,
+        disabilityCertificateDoc: null
     });
     const [showCamera, setShowCamera] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [touched, setTouched] = useState({});
+    const [mobile, setMobile] = useState(localStorage.getItem('userIdentifier')?.replace('+91', '') || '');
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -89,7 +92,6 @@ const CitizenForm = () => {
         if (!formDataObj.get('gender')) missingFields.push('Gender (Applicant Details)');
         if (!formDataObj.get('aadhaarNumber')?.trim()) missingFields.push('Aadhaar Number (Applicant Details)');
         if (!formDataObj.get('mobile')?.trim()) missingFields.push('Mobile Number (Applicant Details)');
-        if (!formDataObj.get('email')?.trim()) missingFields.push('Email (Applicant Details)');
         if (!formDataObj.get('doorStreet')?.trim()) missingFields.push('Door No/Street (Address Details)');
         if (!formDataObj.get('mandalDistrict')?.trim()) missingFields.push('Mandal/District (Address Details)');
         if (!formDataObj.get('villageTown')?.trim()) missingFields.push('Village/Town (Address Details)');
@@ -125,7 +127,9 @@ const CitizenForm = () => {
                 depotDetails: formDataObj.get('depotDetails'),
                 photo: photo,
                 idCardDoc: documents.idCardDoc,
-                addressProofDoc: documents.addressProofDoc
+                addressProofDoc: documents.addressProofDoc,
+                isPhysicallyChallenged: isPhysicallyChallenged,
+                disabilityCertificateDoc: documents.disabilityCertificateDoc
             };
 
             const response = await fetch(API_ENDPOINTS.submitApplication, {
@@ -140,7 +144,8 @@ const CitizenForm = () => {
                 alert(`Application submitted successfully!\nApplication ID: ${data.applicationId}\nPlease save this ID for tracking.`);
                 form.reset();
                 setPhoto(null);
-                setDocuments({ idCardDoc: null, addressProofDoc: null });
+                setIsPhysicallyChallenged(false);
+                setDocuments({ idCardDoc: null, addressProofDoc: null, disabilityCertificateDoc: null });
             } else {
                 alert(data.message || 'Failed to submit application');
             }
@@ -194,13 +199,22 @@ const CitizenForm = () => {
                             </div>
                             <div className={`form-group ${showError('mobile') ? 'has-error' : ''}`}>
                                 <label>{t('mobile_no')} <span className="required-star">*</span></label>
-                                <input type="tel" name="mobile" pattern="[6-9]\d{9}" title="10 digit mobile number starting with 6-9" maxLength="10" onBlur={handleBlur} required placeholder={t('enter_mobile')} />
-                                {showError('mobile') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Mobile number must be 10 digits.</span>}
+                                <input 
+                                    type="tel" 
+                                    name="mobile" 
+                                    value={mobile}
+                                    onChange={(e) => setMobile(e.target.value)}
+                                    onBlur={handleBlur}
+                                    required
+                                    pattern="[6-9]\d{9}"
+                                    title="10 digit mobile number starting with 6-9"
+                                    maxLength="10"
+                                />
+                                <small style={{ color: '#666', marginTop: '5px', display: 'block' }}>Pre-filled from your login. You can edit if needed.</small>
                             </div>
-                            <div className={`form-group ${showError('email') ? 'has-error' : ''}`}>
-                                <label>{t('email')} <span className="required-star">*</span></label>
-                                <input type="email" name="email" required onBlur={handleBlur} placeholder={t('email')} />
-                                {showError('email') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid email address.</span>}
+                            <div className="form-group">
+                                <label>Email Address (Optional)</label>
+                                <input type="email" name="email" placeholder="Enter your email address" />
                             </div>
                         </div>
                     </div>
@@ -252,6 +266,20 @@ const CitizenForm = () => {
                                 <label>{t('upload_aadhar_proof')} <span className="required-star">*</span></label>
                                 <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'idCardDoc')} />
                             </div>
+                            <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '15px' }}>
+                                <div className="checkbox-group">
+                                    <input type="checkbox" name="isPhysicallyChallenged" checked={isPhysicallyChallenged} onChange={(e) => setIsPhysicallyChallenged(e.target.checked)} />
+                                    <label>Physically Challenged / Differently Abled</label>
+                                </div>
+                            </div>
+                            {isPhysicallyChallenged && (
+                                <div className="form-group file-upload" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
+                                    <label>Disability Certificate <span className="required-star">*</span></label>
+                                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleDocumentUpload(e, 'disabilityCertificateDoc')} required={isPhysicallyChallenged} />
+                                    <small style={{color: '#666', fontSize: '0.8rem'}}>Upload disability certificate issued by competent authority (PDF/JPG/PNG)</small>
+                                    {documents.disabilityCertificateDoc && <span style={{color: 'green', fontSize: '0.8rem', marginLeft: '10px'}}>✓ Uploaded</span>}
+                                </div>
+                            )}
                             <div className="form-group photo-upload-container" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
                                 <label style={{ marginBottom: '15px' }}>{t('applicant_photo')}</label>
                                 <div className="photo-box-wrapper">

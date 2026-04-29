@@ -42,6 +42,9 @@ export const translations = {
         view_document: "View detailed document",
         ngo_application: "NGO Application",
         journalist_form: "Journalist Form",
+        citizen_form: "Citizen Form",
+        gov_employee_form: "Govt Employee Form",
+        non_gov_employee_form: "Non-Govt Employee Form",
         my_pass: "My Pass",
         view_active_passes: "View active passes",
         renewal_pass: "Renewal Pass",
@@ -222,10 +225,11 @@ export const translations = {
         // Payment
         renew_your_pass: "Renew Your Pass",
         pass_payment: "Pass Payment",
-        enter_pass_to_renew: "Enter your existing Pass Number to renew",
-        enter_app_id_to_get_pass: "Enter your Application ID to get your pass",
-        existing_pass_number: "Existing Pass Number",
-        application_id_label: "Application ID",
+        enter_pass_to_renew: "Enter your existing Renewal ID to renew",
+        enter_app_id_to_get_pass: "Enter your Renewal ID to get your pass",
+        existing_pass_number: "Renewal ID",
+        renewal_id_label: "Enter Renewal ID",
+        application_id_label: "Renewal ID",
         renewal_note: "Your new pass validity will start from today.",
         renewal_pass_badge: "Renewal Pass",
         new_pass_badge: "New Pass",
@@ -267,7 +271,7 @@ export const translations = {
         pass_number: "Pass Number",
         application_id: "Application ID",
         pass_not_found_alert: "Pass number not found in My Passes!\nPlease check your pass number and try again.",
-        app_id_not_found_alert: "Application ID not found!\nUse APP123 or APP456 for demo.",
+        app_id_not_found_alert: "No approved application found with this Renewal ID!\nPlease check and try again.",
         id_step: "ID",
         plan_step: "Plan",
         pay_step: "Pay",
@@ -307,6 +311,10 @@ export const translations = {
         back_to_search: "Back to Search",
         updating_btn: "Updating...",
         update_details_btn: "Update Details",
+
+        // Logout
+        logout: "Logout",
+        logout_confirm: "Are you sure you want to logout?",
 
         // Footer
         digital_bus_pass_system: "Digital Bus Pass System",
@@ -358,6 +366,9 @@ export const translations = {
         view_document: "వివరణాత్మక పత్రాన్ని చూడండి",
         ngo_application: "NGO దరఖాస్తు",
         journalist_form: "జర్నలిస్ట్ ఫారమ్",
+        citizen_form: "పౌరుల ఫారమ్",
+        gov_employee_form: "ప్రభుత్వ ఉద్యోగి ఫారమ్",
+        non_gov_employee_form: "ప్రభుత్వేతర ఉద్యోగి ఫారమ్",
         my_pass: "నా పాస్",
         view_active_passes: "క్రియాశీల పాస్‌లను వీక్షించండి",
         renewal_pass: "పునరుద్ధరణ పాస్",
@@ -538,10 +549,11 @@ export const translations = {
         // Payment
         renew_your_pass: "మీ పాస్‌ను పునరుద్ధరించండి",
         pass_payment: "పాస్ చెల్లింపు",
-        enter_pass_to_renew: "పునరుద్ధరించడానికి మీ ప్రస్తుత పాస్ నంబర్‌ను నమోదు చేయండి",
-        enter_app_id_to_get_pass: "మీ పాస్ పొందడానికి మీ దరఖాస్తు ఐడిని నమోదు చేయండి",
-        existing_pass_number: "ప్రస్తుత పాస్ నంబర్",
-        application_id_label: "దరఖాస్తు ఐడి (Application ID)",
+        enter_pass_to_renew: "పునరుద్ధరించడానికి మీ రినూవల్ ఐడిని నమోదు చేయండి",
+        enter_app_id_to_get_pass: "మీ పాస్ పొందడానికి మీ రినూవల్ ఐడిని నమోదు చేయండి",
+        existing_pass_number: "రినూవల్ ఐడి",
+        renewal_id_label: "రినూవల్ ఐడి నమోదు చేయండి",
+        application_id_label: "రినూవల్ ఐడి",
         renewal_note: "మీ కొత్త పాస్ చెల్లుబాటు ఈ రోజు నుండి ప్రారంభమవుతుంది.",
         renewal_pass_badge: "పునరుద్ధరణ పాస్",
         new_pass_badge: "కొత్త పాస్",
@@ -583,7 +595,7 @@ export const translations = {
         pass_number: "పాస్ నంబర్",
         application_id: "దరఖాస్తు ఐడి",
         pass_not_found_alert: "నా పాస్‌లలో ఈ పాస్ నంబర్ కనుగొనబడలేదు!\nదయచేసి మీ పాస్ నంబర్‌ను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.",
-        app_id_not_found_alert: "దరఖాస్తు ఐడి కనుగొనబడలేదు!\nడెమో కోసం APP123 లేదా APP456 ఉపయోగించండి.",
+        app_id_not_found_alert: "ఈ రినూవల్ ఐడితో ఆమోదించిన దరఖాస్తు కనుగొనబడలేదు!\nదయచేసి తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.",
         id_step: "ఐడి",
         plan_step: "ప్లాన్",
         pay_step: "పే",
@@ -623,6 +635,10 @@ export const translations = {
         back_to_search: "తిరిగి సెర్చ్‌కి",
         updating_btn: "నవీకరిస్తోంది...",
         update_details_btn: "వివరాలను నవీకరించండి",
+
+        // Logout
+        logout: "లాగ్ అవుట్",
+        logout_confirm: "మీరు లాగ్ అవుట్ చేయాలనుకుంటున్నారా?",
 
         // Footer
         digital_bus_pass_system: "డిజిటల్ బస్సు పాస్ వ్యవస్థ",

@@ -1,0 +1,256 @@
+.gov-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.gov-login-bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  animation: orbFloat 8s ease-in-out infinite;
+}
+
+.gov-login-bg-orb-1 {
+  width: 400px;
+  height: 400px;
+  background: rgba(99, 102, 241, 0.12);
+  top: -100px;
+  left: -100px;
+}
+
+.gov-login-bg-orb-2 {
+  width: 350px;
+  height: 350px;
+  background: rgba(251, 191, 36, 0.08);
+  bottom: -80px;
+  right: -80px;
+  animation-delay: 4s;
+}
+
+@keyframes orbFloat {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(20px, -20px) scale(1.05);
+  }
+}
+
+.gov-login-card {
+  background: rgba(30, 41, 59, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 24px;
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow:
+    0 25px 60px -12px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(99, 102, 241, 0.05) inset;
+  position: relative;
+  z-index: 1;
+  animation: cardSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cardSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.gov-login-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.gov-emblem {
+  font-size: 52px;
+  margin-bottom: 14px;
+  display: inline-block;
+  animation: emblemGlow 3s ease-in-out infinite;
+}
+
+@keyframes emblemGlow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.2));
+  }
+  50% {
+    filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.4));
+  }
+}
+
+.gov-login-header h1 {
+  color: #f8fafc;
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  letter-spacing: 0.5px;
+}
+
+.gov-login-header p {
+  color: #94a3b8;
+  font-size: 14px;
+  margin: 0;
+  letter-spacing: 0.3px;
+}
+
+.gov-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.gov-error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  text-align: center;
+  animation: errorShake 0.4s ease-in-out;
+}
+
+@keyframes errorShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+
+.gov-field label {
+  display: block;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.gov-field input {
+  width: 100%;
+  padding: 14px 16px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1.5px solid rgba(99, 102, 241, 0.15);
+  border-radius: 12px;
+  color: #f8fafc;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.gov-field input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.gov-field input::placeholder {
+  color: #475569;
+}
+
+.gov-login-btn {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+}
+
+.gov-login-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.35);
+}
+
+.gov-login-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.gov-login-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.gov-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.gov-login-footer {
+  text-align: center;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(99, 102, 241, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.gov-lock-icon {
+  font-size: 14px;
+}
+
+.gov-login-footer p {
+  color: #64748b;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.8px;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .gov-login-card {
+    padding: 36px 24px;
+  }
+  .gov-login-header h1 {
+    font-size: 22px;
+  }
+}

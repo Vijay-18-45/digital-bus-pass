@@ -7,13 +7,16 @@ import { API_ENDPOINTS } from '../api/config';
 const JournalistForm = () => {
     const { t } = useLanguage();
     const [photo, setPhoto] = useState(null);
+    const [isPhysicallyChallenged, setIsPhysicallyChallenged] = useState(false);
     const [documents, setDocuments] = useState({
         idCardDoc: null,
-        addressProofDoc: null
+        addressProofDoc: null,
+        disabilityCertificateDoc: null
     });
     const [showCamera, setShowCamera] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [touched, setTouched] = useState({});
+    const [mobileNumber, setMobileNumber] = useState(localStorage.getItem('userIdentifier')?.replace('+91', '') || '');
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -87,7 +90,6 @@ const JournalistForm = () => {
                 { name: 'fullName', label: 'Full Name', section: 'Personal Details' },
                 { name: 'aadharNumber', label: 'Aadhaar Number', section: 'Personal Details' },
                 { name: 'mobileNumber', label: 'Mobile Number', section: 'Personal Details' },
-                { name: 'email', label: 'Email ID', section: 'Personal Details' },
                 { name: 'gender', label: 'Gender', section: 'Personal Details' },
                 { name: 'mediaOrganization', label: 'Media Organization', section: 'Journalist Details' },
                 { name: 'passType', label: 'Pass Type', section: 'Route Details' },
@@ -116,7 +118,6 @@ const JournalistForm = () => {
                 aadharNumber: formDataObj.get('aadharNumber'),
                 dateOfBirth: formDataObj.get('dateOfBirth'),
                 mobileNumber: formDataObj.get('mobileNumber'),
-                email: formDataObj.get('email'),
                 gender: formDataObj.get('gender'),
                 mediaOrganization: formDataObj.get('mediaOrganization'),
                 designation: formDataObj.get('designation'),
@@ -131,7 +132,9 @@ const JournalistForm = () => {
                 depotDetails: formDataObj.get('depotDetails'),
                 photo: photo,
                 idCardDoc: documents.idCardDoc,
-                addressProofDoc: documents.addressProofDoc
+                addressProofDoc: documents.addressProofDoc,
+                isPhysicallyChallenged: isPhysicallyChallenged,
+                disabilityCertificateDoc: documents.disabilityCertificateDoc
             };
 
             const response = await fetch(API_ENDPOINTS.submitApplication, {
@@ -145,7 +148,8 @@ const JournalistForm = () => {
                 alert(`Application submitted successfully! Your Application ID: ${data.applicationId}`);
                 form.reset();
                 setPhoto(null);
-                setDocuments({ idCardDoc: null, addressProofDoc: null });
+                setIsPhysicallyChallenged(false);
+                setDocuments({ idCardDoc: null, addressProofDoc: null, disabilityCertificateDoc: null });
             } else {
                 alert(`Submission failed: ${data.message || 'Unknown error'}\n\nPlease check all required fields.`);
             }
@@ -199,13 +203,22 @@ const JournalistForm = () => {
                             </div>
                             <div className={`form-group ${showError('mobileNumber') ? 'has-error' : ''}`}>
                                 <label>{t('mobile_no')} <span className="required-star">*</span></label>
-                                <input type="tel" name="mobileNumber" pattern="[6-9]\d{9}" title="10 digit mobile number starting with 6-9" maxLength="10" onBlur={handleBlur} required placeholder={t('enter_mobile')} />
-                                {showError('mobileNumber') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Mobile number must be 10 digits.</span>}
+                                <input 
+                                    type="tel" 
+                                    name="mobileNumber" 
+                                    value={mobileNumber}
+                                    onChange={(e) => setMobileNumber(e.target.value)}
+                                    onBlur={handleBlur}
+                                    required
+                                    pattern="[6-9]\d{9}"
+                                    title="10 digit mobile number starting with 6-9"
+                                    maxLength="10"
+                                />
+                                <small style={{ color: '#666', marginTop: '5px', display: 'block' }}>Pre-filled from your login. You can edit if needed.</small>
                             </div>
-                            <div className={`form-group ${showError('email') ? 'has-error' : ''}`}>
-                                <label>{t('email')} <span className="required-star">*</span></label>
-                                <input type="email" name="email" required onBlur={handleBlur} placeholder={t('email')} />
-                                {showError('email') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Please enter a valid email address.</span>}
+                            <div className="form-group">
+                                <label>Email ID (Optional)</label>
+                                <input type="email" name="emailId" onBlur={handleBlur} placeholder="Enter your email" />
                             </div>
                         </div>
                     </div>
@@ -215,16 +228,29 @@ const JournalistForm = () => {
                         <h3>{t('journalist_details')}</h3>
                         <div className="form-grid">
                             <div className="form-group full-width">
-                                <label>{t('organization_name')}</label>
+                                <label>{t('organization_name')} <span className="required-star">*</span></label>
                                 <input type="text" name="mediaOrganization" required />
                             </div>
                             <div className="form-group">
-                                <label>{t('designation')}</label>
-                                <input type="text" name="designation" required />
+                                <label>{t('designation')} <span className="required-star">*</span></label>
+                                <input type="text" name="designation" required placeholder="Reporter / Editor / etc." />
                             </div>
                             <div className="form-group">
-                                <label>{t('accreditation_no')}</label>
+                                <label>{t('accreditation_no')} <span className="required-star">*</span></label>
                                 <input type="text" name="pressIdNumber" required />
+                            </div>
+                            <div className="form-group">
+                                <label>Employment Type <span className="required-star">*</span></label>
+                                <select name="employmentType" required defaultValue="">
+                                    <option value="" disabled>Select Type</option>
+                                    <option value="Full-time">Full-time</option>
+                                    <option value="Freelance">Freelance</option>
+                                    <option value="Contract">Contract</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Date of Joining <span className="required-star">*</span></label>
+                                <input type="date" name="dateOfJoining" required max={new Date().toISOString().split('T')[0]} />
                             </div>
                         </div>
                     </div>
@@ -233,20 +259,20 @@ const JournalistForm = () => {
                     <div className="form-section">
                         <h3>{t('address_details')}</h3>
                         <div className="form-group full-width">
-                            <label>{t('door_no_street')}</label>
+                            <label>{t('door_no_street')} <span className="required-star">*</span></label>
                             <textarea name="residentialAddress" required rows="3" placeholder={t('door_no_street')}></textarea>
                         </div>
                         <div className="form-grid">
                             <div className="form-group">
-                                <label>{t('mandal_district')}</label>
+                                <label>{t('mandal_district')} <span className="required-star">*</span></label>
                                 <input type="text" name="mandalDistrict" required placeholder={t('mandal_district')} />
                             </div>
                             <div className="form-group">
-                                <label>{t('village_town')}</label>
+                                <label>{t('village_town')} <span className="required-star">*</span></label>
                                 <input type="text" name="villageTown" required placeholder={t('village_town')} />
                             </div>
                             <div className="form-group">
-                                <label>{t('pincode')}</label>
+                                <label>{t('pincode')} <span className="required-star">*</span></label>
                                 <input type="text" name="pincode" pattern="\d{6}" title="6 digit pincode" maxLength="6" required placeholder={t('pincode')} />
                             </div>
                         </div>
@@ -257,17 +283,31 @@ const JournalistForm = () => {
                         <h3>{t('documents_upload')}</h3>
                         <div className="form-grid">
                             <div className="form-group file-upload" style={{ gridColumn: '1 / -1' }}>
-                                <label>{t('upload_accreditation')} <span className="required-star">*</span></label>
+                                <label>Press / Journalist ID Card <span className="required-star">*</span></label>
                                 <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'idCardDoc')} />
                             </div>
                             <div className="form-group file-upload">
-                                <label>{t('upload_address_proof')} <span className="required-star">*</span></label>
+                                <label>Accreditation Certificate <span className="required-star">*</span></label>
                                 <input type="file" accept="image/*,.pdf" required onChange={(e) => handleDocumentUpload(e, 'addressProofDoc')} />
                             </div>
                             <div className="form-group file-upload">
-                                <label>{t('upload_aadhar_proof')} <span className="required-star">*</span></label>
+                                <label>Authorization Letter <span className="required-star">*</span></label>
                                 <input type="file" accept="image/*,.pdf" required />
                             </div>
+                            <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '15px' }}>
+                                <div className="checkbox-group">
+                                    <input type="checkbox" name="isPhysicallyChallenged" checked={isPhysicallyChallenged} onChange={(e) => setIsPhysicallyChallenged(e.target.checked)} />
+                                    <label>Physically Challenged / Differently Abled</label>
+                                </div>
+                            </div>
+                            {isPhysicallyChallenged && (
+                                <div className="form-group file-upload" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
+                                    <label>Disability Certificate <span className="required-star">*</span></label>
+                                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleDocumentUpload(e, 'disabilityCertificateDoc')} required={isPhysicallyChallenged} />
+                                    <small style={{color: '#666', fontSize: '0.8rem'}}>Upload disability certificate issued by competent authority (PDF/JPG/PNG)</small>
+                                    {documents.disabilityCertificateDoc && <span style={{color: 'green', fontSize: '0.8rem', marginLeft: '10px'}}>✓ Uploaded</span>}
+                                </div>
+                            )}
                             <div className="form-group photo-upload-container" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
                                 <label style={{ marginBottom: '15px' }}>{t('applicant_photo')}</label>
                                 <div className="photo-box-wrapper">
@@ -296,7 +336,7 @@ const JournalistForm = () => {
                         <h3>{t('pass_requirement')}</h3>
                         <div className="form-grid">
                             <div className="form-group">
-                                <label>{t('pass_type')}</label>
+                                <label>{t('pass_type')} <span className="required-star">*</span></label>
                                 <select name="passType" required defaultValue="">
                                     <option value="" disabled>{t('select_pass')}</option>
                                     <option value="Ordinary">{t('ordinary')}</option>
@@ -315,7 +355,7 @@ const JournalistForm = () => {
                                 {showError('toPlace') && <span className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}>Destination is required.</span>}
                             </div>
                             <div className="form-group">
-                                <label>{t('validity')}</label>
+                                <label>{t('validity')} <span className="required-star">*</span></label>
                                 <select name="validity" required defaultValue="">
                                     <option value="" disabled>{t('select_validity')}</option>
                                     <option value="Monthly">{t('monthly')}</option>
@@ -335,7 +375,7 @@ const JournalistForm = () => {
                         <h3>{t('declaration')}</h3>
                         <label className="checkbox-label">
                             <input type="checkbox" required />
-                            <span>{t('declaration_text')}</span>
+                            <span>{t('declaration_text')} <span className="required-star">*</span></span>
                         </label>
                     </div>
 

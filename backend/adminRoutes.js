@@ -1,18 +1,70 @@
 import express from 'express';
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import pool from './db_normalized.js';
+import { generateRenewalId, sendApprovalMail, sendRejectionMail } from './utils/sendApprovalMail.js';
+import { sendApprovalSMS, sendRejectionSMS } from './utils/sendSMS.js';
 
 dotenv.config();
 
 export const adminRouter = express.Router();
+export const govAdminRouter = express.Router();
 
-// Create transporter
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+// Predefined government admin credentials
+const GOV_ADMINS = [
+    { email: 'apsrtc@gmail.com', password: 'apsrtc123', name: 'APSRTC Admin' },
+    { email: 'govadmin@apsrtc.gov.in', password: 'govadmin123', name: 'Government Admin' },
+    { email: 'super@apsrtc.gov.in', password: 'super123', name: 'Super Admin' },
+    { email: 'director@apsrtc.gov.in', password: 'director123', name: 'Director' }
+];
+
+// Gov Admin Login Route
+govAdminRouter.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    const admin = GOV_ADMINS.find(a => a.email === email && a.password === password);
+    if (admin) {
+        return res.json({ success: true, admin: { email: admin.email, name: admin.name } });
+    }
+    return res.status(401).json({ success: false, message: 'Invalid email or password' });
+});
+
+// Gov Admin Stats Route
+govAdminRouter.get('/stats', async (req, res) => {
+    try {
+        const [categoryStats] = await pool.query(`
+            SELECT 
+                application_type,
+                COUNT(*) as total_applications,
+                SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as passes_issued,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
+            FROM applications
+            GROUP BY application_type
+        `);
+
+        const [revenueRows] = await pool.query(`
+            SELECT a.application_type, SUM(p.amount) as revenue
+            FROM payments p
+            JOIN applications a ON p.application_id = a.application_id
+            WHERE p.status = 'completed'
+            GROUP BY a.application_type
+        `);
+
+        const [totalRevenueRows] = await pool.query(`
+            SELECT SUM(amount) as total FROM payments WHERE status = 'completed'
+        `);
+
+        res.json({
+            success: true,
+            data: {
+                categoryStats,
+                revenueByCategory: revenueRows,
+                totalRevenue: totalRevenueRows[0]?.total || 0
+            }
+        });
+    } catch (error) {
+        console.error('Gov Admin Stats Error:', error);
+        res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
 
@@ -33,6 +85,7 @@ export const initializeAdmin = async () => {
         await connection.query(`
             INSERT IGNORE INTO admin_details (admin_id, admin_password, depo_name)
             VALUES 
+            ('admin123', 'admin123', 'Main Depot'),
             ('admin1', 'admin123', 'Vijayawada'),
             ('admin2', 'admin123', 'Guntur'),
             ('admin3', 'admin123', 'Vizag')
@@ -46,18 +99,18 @@ export const initializeAdmin = async () => {
 };
 
 adminRouter.post('/login', async (req, res) => {
-    const { admin_id, admin_password, depo_name } = req.body;
+    const { admin_id, admin_password } = req.body;
 
     try {
         const [rows] = await pool.query(
-            'SELECT * FROM admin_details WHERE admin_id = ? AND admin_password = ? AND depo_name = ?',
-            [admin_id, admin_password, depo_name]
+            'SELECT * FROM admin_details WHERE admin_id = ? AND admin_password = ?',
+            [admin_id, admin_password]
         );
 
         if (rows.length > 0) {
             res.json({ success: true, message: 'Login successful', admin: rows[0] });
         } else {
-            res.status(401).json({ success: false, message: 'Invalid Admin ID, Password, or Depo Name' });
+            res.status(401).json({ success: false, message: 'Invalid Admin ID or Password' });
         }
     } catch (error) {
         console.error('Admin Login Error:', error);
@@ -155,7 +208,7 @@ adminRouter.post('/applications/:applicationId/status', async (req, res) => {
     const { status } = req.body;
 
     try {
-        // Fetch the application
+        // Fetch the base application
         const [rows] = await pool.query('SELECT * FROM applications WHERE application_id = ?', [applicationId]);
 
         if (rows.length === 0) {
@@ -163,50 +216,72 @@ adminRouter.post('/applications/:applicationId/status', async (req, res) => {
         }
 
         const application = rows[0];
+        let renewalId = null;
 
-        // Update the status in the DB
-        await pool.query('UPDATE applications SET status = ? WHERE application_id = ?', [status, applicationId]);
+        // Generate renewal ID on approval
+        if (status === 'approved') {
+            renewalId = generateRenewalId();
+            await pool.query('UPDATE applications SET status = ?, renewal_id = ? WHERE application_id = ?', [status, renewalId, applicationId]);
+        } else {
+            await pool.query('UPDATE applications SET status = ? WHERE application_id = ?', [status, applicationId]);
+        }
 
-        // Send email based on status
+        // Send email notification
         if (application.email) {
-            let emailSubject = '';
-            let emailBody = '';
-
-            if (status === 'approved') {
-                emailSubject = "APSRTC Bus Pass - Application Approved";
-                emailBody = `
-                  <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-                    <h2 style="color: #27ae60;">Application Approved</h2>
-                    <p>Dear ${application.full_name},</p>
-                    <p>Your bus pass application details have been accurately verified.</p>
-                    <p>Status: <strong style="color: #27ae60;">ACCEPTED</strong></p>
-                    <p>Please proceed to the platform to complete your payment.</p>
-                  </div>
-                `;
-            } else if (status === 'rejected') {
-                emailSubject = "APSRTC Bus Pass - Application Rejected";
-                emailBody = `
-                  <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-                    <h2 style="color: #e74c3c;">Application Rejected</h2>
-                    <p>Dear ${application.full_name},</p>
-                    <p>Unfortunately, your application (ID: ${application.application_id}) has been rejected.</p>
-                    <p>Your details were not accurate or the uploaded documents were invalid. Please cross-check your details and apply again.</p>
-                    <p>Status: <strong style="color: #e74c3c;">REJECTED</strong></p>
-                  </div>
-                `;
-            }
-
-            if (emailBody !== '') {
-                await transporter.sendMail({
-                    from: process.env.EMAIL_USER,
-                    to: application.email,
-                    subject: emailSubject,
-                    html: emailBody
-                });
+            try {
+                if (status === 'approved') {
+                    await sendApprovalMail({
+                        to: application.email,
+                        fullName: application.full_name,
+                        applicationId,
+                        renewalId,
+                        fromPlace: application.from_place,
+                        toPlace: application.to_place
+                    });
+                } else if (status === 'rejected') {
+                    await sendRejectionMail({
+                        to: application.email,
+                        fullName: application.full_name,
+                        applicationId
+                    });
+                }
+                console.log(`✅ Email sent to ${application.email} for ${applicationId}`);
+            } catch (emailErr) {
+                console.error('⚠️ Email send failed:', emailErr.message);
             }
         }
 
-        res.json({ success: true, message: `Application ${status}` });
+        // Send SMS notification
+        if (application.mobile) {
+            try {
+                if (status === 'approved') {
+                    await sendApprovalSMS({
+                        to: application.mobile,
+                        fullName: application.full_name,
+                        applicationId,
+                        renewalId
+                    });
+                } else if (status === 'rejected') {
+                    await sendRejectionSMS({
+                        to: application.mobile,
+                        fullName: application.full_name,
+                        applicationId
+                    });
+                }
+                console.log(`✅ SMS sent to ${application.mobile} for ${applicationId}`);
+            } catch (smsErr) {
+                console.error('⚠️ SMS send failed:', smsErr.message);
+            }
+        }
+
+        // Return response to frontend
+        res.json({
+            success: true,
+            message: `Application ${status}`,
+            application_id: applicationId,
+            renewal_id: renewalId,
+            status: status
+        });
     } catch (error) {
         console.error('Update Application Status Error:', error);
         res.status(500).json({ success: false, message: 'Server Error' });

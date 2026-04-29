@@ -1,0 +1,203 @@
+diff --git a/backend/server.js b/backend/server.js
+index db9a968..b305951 100644
+--- a/backend/server.js
++++ b/backend/server.js
+@@ -1,12 +1,12 @@
++import dotenv from "dotenv";
++dotenv.config(); // MUST be first before any env var usage
++
+ import express from "express";
+-import nodemailer from "nodemailer";
+ import cors from "cors";
+-import dotenv from "dotenv";
+-import pool, { testConnection, initializeDatabase, createApplication, getApplication, getAllApplications, updateApplicationStatus } from "./db_normalized.js";
++import twilio from "twilio";
++import pool, { testConnection, initializeDatabase, createApplication, getApplication, getAllApplications, updateApplicationStatus, autoExpirePasses } from "./db_normalized.js";
+ import { adminRouter, initializeAdmin } from "./adminRoutes.js";
+ 
+-dotenv.config();
+-
+ const app = express();
+ app.use(express.json({ limit: '10mb' })); // Increased for photo uploads
+ app.use(cors());
+@@ -15,14 +15,14 @@ const PORT = process.env.PORT || 5000;
+ 
+ app.use('/api/admin', adminRouter);
+ 
+-// Create transporter
+-const transporter = nodemailer.createTransport({
+-  service: "gmail",
+-  auth: {
+-    user: process.env.EMAIL_USER,
+-    pass: process.env.EMAIL_PASS
+-  }
+-});
++// Twilio client (initialized after dotenv.config)
++const twilioClient = twilio(
++  process.env.TWILIO_ACCOUNT_SID,
++  process.env.TWILIO_AUTH_TOKEN
++);
++const TWILIO_PHONE = process.env.TWILIO_PHONE_NUMBER;
++
++console.log('✅ Twilio configured with phone:', TWILIO_PHONE);
+ 
+ // Generate unique IDs
+ const generateApplicationId = () => "APP" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 4).toUpperCase();
+@@ -47,72 +47,73 @@ app.get("/health", async (req, res) => {
+   });
+ });
+ 
+-// ==================== OTP ROUTES ====================
++// ==================== OTP ROUTES (Twilio SMS) ====================
+ 
+-// Send OTP Email
+-app.post("/send-email", async (req, res) => {
+-  const { email } = req.body;
++// Send OTP via SMS
++app.post("/send-sms-otp", async (req, res) => {
++  let { phone } = req.body;
+ 
+-  if (!email) {
+-    return res.status(400).json({ message: "Email is required" });
++  if (!phone) {
++    return res.status(400).json({ message: "Mobile number is required" });
++  }
++
++  // Normalize to E.164 format (assume India +91 if no country code)
++  if (!phone.startsWith("+")) {
++    phone = "+91" + phone.replace(/^0+/, "");
+   }
+ 
+   const otp = Math.floor(100000 + Math.random() * 900000).toString();
+   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+ 
+   try {
+-    // Delete any existing OTPs for this email
+-    await pool.query("DELETE FROM otps WHERE email = ?", [email]);
++    // Delete any existing OTPs for this phone
++    await pool.query("DELETE FROM otps WHERE identifier = ?", [phone]);
+ 
+     // Store OTP in database
+     await pool.query(
+-      "INSERT INTO otps (email, otp, expires_at) VALUES (?, ?, ?)",
+-      [email, otp, expiresAt]
++      "INSERT INTO otps (identifier, otp, expires_at) VALUES (?, ?, ?)",
++      [phone, otp, expiresAt]
+     );
+ 
+-    // Send email
+-    await transporter.sendMail({
+-      from: process.env.EMAIL_USER,
+-      to: email,
+-      subject: "APSRTC Bus Pass - Your OTP Code",
+-      html: `
+-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
+-          <h2 style="color: #e31e24;">APSRTC Digital Bus Pass</h2>
+-          <p>Your One-Time Password (OTP) for verification is:</p>
+-          <h1 style="color: #333; letter-spacing: 5px; font-size: 32px;">${otp}</h1>
+-          <p style="color: #666;">This OTP is valid for 10 minutes.</p>
+-          <hr style="border: 1px solid #eee;">
+-          <p style="font-size: 12px; color: #999;">If you didn't request this OTP, please ignore this email.</p>
+-        </div>
+-      `
++    // Send SMS via Twilio
++    await twilioClient.messages.create({
++      body: `Your APSRTC Bus Pass OTP is: ${otp}. Valid for 10 minutes. Do not share with anyone.`,
++      from: TWILIO_PHONE,
++      to: phone
+     });
+ 
+     // Create or update user
+     await pool.query(
+-      "INSERT INTO users (email) VALUES (?) ON DUPLICATE KEY UPDATE last_login = CURRENT_TIMESTAMP",
+-      [email]
++      "INSERT INTO users (phone) VALUES (?) ON DUPLICATE KEY UPDATE last_login = CURRENT_TIMESTAMP",
++      [phone]
+     );
+ 
++    console.log(`✅ OTP sent to ${phone}: ${otp}`);
+     res.json({ message: "OTP sent successfully" });
+ 
+   } catch (error) {
+-    console.error("Send OTP Error:", error);
+-    res.status(500).json({ message: "Failed to send OTP" });
++    console.error("Send SMS OTP Error:", error.message);
++    res.status(500).json({ message: "Failed to send OTP", error: error.message });
+   }
+ });
+ 
+-// Verify OTP
+-app.post("/verify-otp", async (req, res) => {
+-  const { email, otp } = req.body;
++// Verify SMS OTP
++app.post("/verify-sms-otp", async (req, res) => {
++  let { phone, otp } = req.body;
+ 
+-  if (!email || !otp) {
+-    return res.status(400).json({ message: "Email and OTP are required" });
++  if (!phone || !otp) {
++    return res.status(400).json({ message: "Phone and OTP are required" });
++  }
++
++  // Normalize phone
++  if (!phone.startsWith("+")) {
++    phone = "+91" + phone.replace(/^0+/, "");
+   }
+ 
+   try {
+     const [rows] = await pool.query(
+-      "SELECT * FROM otps WHERE email = ? AND otp = ? AND expires_at > NOW() AND is_used = FALSE",
+-      [email, otp]
++      "SELECT * FROM otps WHERE identifier = ? AND otp = ? AND expires_at > NOW() AND is_used = FALSE",
++      [phone, otp]
+     );
+ 
+     if (rows.length > 0) {
+@@ -120,9 +121,32 @@ app.post("/verify-otp", async (req, res) => {
+       await pool.query("UPDATE otps SET is_used = TRUE WHERE id = ?", [rows[0].id]);
+ 
+       // Update user last login
+-      await pool.query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE email = ?", [email]);
+-
+-      return res.json({ message: "OTP verified successfully", email });
++      await pool.query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE phone = ?", [phone]);
++
++      // CHECK FOR SPECIAL ROLES
++      let role = 'user';
++      let adminData = null;
++
++      // Check Depot Admin
++      const [admins] = await pool.query("SELECT * FROM admin_details WHERE phone = ?", [phone]);
++      if (admins.length > 0) {
++        role = 'admin';
++        adminData = admins[0];
++      } else {
++        // Check Gov Admin
++        const [govs] = await pool.query("SELECT * FROM gov_admins WHERE phone = ?", [phone]);
++        if (govs.length > 0) {
++          role = 'gov';
++          adminData = govs[0];
++        }
++      }
++
++      return res.json({ 
++        message: "OTP verified successfully", 
++        phone, 
++        role,
++        adminData
++      });
+     } else {
+       return res.status(400).json({ message: "Invalid or expired OTP" });
+     }
+@@ -420,6 +444,11 @@ const startServer = async () => {
+     await initializeDatabase();
+     // Initialize Admin credentials
+     await initializeAdmin();
++    
++    // Pass Automation: Run every hour to check for expired passes
++    autoExpirePasses(); 
++    setInterval(autoExpirePasses, 3600000); 
++    console.log("🕒 Pass Automation Service: ACTIVE (Interval: 1 hour)");
+   } else {
+     console.warn("⚠️ Starting server without database connection. Some features may not work.");
+   }

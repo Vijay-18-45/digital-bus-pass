@@ -6,10 +6,48 @@
   background: var(--hint-bg);
   padding: 0;
   font-family: inherit;
-  box-shadow: var(--glass-shadow);
-  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  border-radius: 20px;
   overflow: hidden;
   position: relative;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  backdrop-filter: blur(10px);
+}
+
+.pass-container:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+}
+
+.expired-pass {
+  filter: grayscale(0.6);
+  opacity: 0.8;
+  border-color: #ef4444 !important;
+}
+
+.expired-stamp {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-25deg);
+  border: 4px solid #ef4444;
+  color: #ef4444;
+  font-size: 3rem;
+  font-weight: 900;
+  padding: 10px 20px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  z-index: 100;
+  pointer-events: none;
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  animation: stampIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes stampIn {
+  0% { transform: translate(-50%, -50%) rotate(-25deg) scale(3); opacity: 0; }
+  100% { transform: translate(-50%, -50%) rotate(-25deg) scale(1); opacity: 1; }
 }
 
 /* ─── Floating Date Watermark ─── */
@@ -84,9 +122,26 @@
 .pass-header {
   text-align: center;
   background: linear-gradient(135deg, #d71920 60%, #b51217 100%);
-  padding: 16px 14px 12px;
+  padding: 20px 14px 16px;
   position: relative;
+  overflow: hidden;
   z-index: 2;
+  transition: background-color 0.5s ease;
+}
+
+.shimmer-overlay {
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shimmerMove 3s infinite linear;
+}
+
+@keyframes shimmerMove {
+  0% { left: -150%; }
+  100% { left: 150%; }
 }
 
 .pass-header h3 {
@@ -98,9 +153,25 @@
 }
 
 .pass-header span {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: bold;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  margin-top: 4px;
+  display: block;
+}
+
+/* matrix style live clock */
+.live-clock {
+  background-color: #1a1a1a;
+  color: #00ff41;
+  text-align: center;
+  padding: 10px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+  border-bottom: 2px solid #333;
 }
 
 /* ─── Pass Top Row (photo + basic info) ─── */
@@ -130,12 +201,20 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.pass-photo-box:hover img {
+  transform: scale(1.1);
 }
 
 .pass-photo-placeholder {
-  font-size: 36px;
-  color: #c46b00;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
 }
 
 .pass-top-info {
@@ -143,18 +222,28 @@
 }
 
 .pass-top-info p {
-  margin: 5px 0;
-  font-size: 13px;
-  color: var(--text-primary);
+  margin: 8px 0;
+  font-size: 14px;
+  color: #333;
   display: flex;
-  gap: 4px;
-  border-bottom: 1px dashed var(--border-color);
-  padding-bottom: 4px;
+  flex-direction: column;
+  gap: 2px;
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .pass-top-info p strong {
-  color: #000;
-  min-width: 70px;
+  color: #888;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.pass-top-info p span {
+  font-weight: 700;
+  color: #222;
+  font-size: 13px;
 }
 
 /* ─── Pass Body ─── */
@@ -165,31 +254,59 @@
 }
 
 .pass-body p {
-  margin: 6px 0;
-  font-size: 13px;
-  color: var(--text-primary);
+  margin: 12px 0;
+  font-size: 14px;
   display: flex;
-  justify-content: space-between;
-  border-bottom: 1px dashed var(--border-color);
-  padding-bottom: 4px;
+  flex-direction: column;
+  gap: 2px;
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .pass-body p strong {
-  color: var(--text-primary);
+  color: #888;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
-/* ─── Validity Banner ─── */
-.pass-validity-banner {
-  background: var(--hint-text);
-  color: white;
-  text-align: center;
-  font-size: 12px;
-  font-weight: bold;
-  padding: 6px;
-  margin: 0 18px 14px;
+.pass-body p span {
+  font-weight: 700;
+  color: #222;
+  font-size: 13px;
+}
+
+/* ─── Route Highlight ─── */
+.pass-body p.route-highlight {
+  background: linear-gradient(90deg, #fff3cd 0%, #ffe082 100%);
+  padding: 8px 10px;
   border-radius: 6px;
+  border: 1px solid #ffc107;
+  font-weight: bold;
+  margin: 8px 0;
+}
+
+.pass-body p.route-highlight span {
+  color: #d71920;
+  font-weight: bold;
+}
+
+/* Validity Banner */
+.pass-validity-banner {
+  background: #FFF9C4;
+  color: #333;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 12px;
+  margin: 0 18px 14px;
+  border-radius: 10px;
+  border: 1px dashed #FBC02D;
   position: relative;
   z-index: 2;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* ─── Print Button ─── */

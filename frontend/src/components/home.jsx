@@ -8,8 +8,17 @@ const Home = () => {
   const navigate = useNavigate();
   const [showForms, setShowForms] = useState(false);
   const [showEmployeeLinks, setShowEmployeeLinks] = useState(false);
-  const [showStudentLinks, setShowStudentLinks] = useState(false);
+  const [showUserLinks, setShowUserLinks] = useState(false);
   const { t } = useLanguage();
+
+  const handleLogout = () => {
+    if (window.confirm(t('logout_confirm') || 'Are you sure you want to logout?')) {
+      localStorage.removeItem('userIdentifier');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userPhone');
+      navigate('/');
+    }
+  };
 
   const handleFormsClick = () => {
     setShowForms(!showForms);
@@ -19,8 +28,8 @@ const Home = () => {
     setShowEmployeeLinks(!showEmployeeLinks);
   };
 
-  const handleStudentClick = () => {
-    setShowStudentLinks(!showStudentLinks);
+  const handleUserClick = () => {
+    setShowUserLinks(!showUserLinks);
   };
 
   const handleCitizenClick = () => {
@@ -39,6 +48,15 @@ const Home = () => {
     <div className="home-page-container">
       <div className="top-header-wrapper">
         <Header />
+      </div>
+
+      <div className="user-sub-header">
+        <div className="user-sub-header-info">
+          <span>👤 {localStorage.getItem('userIdentifier') || 'User'}</span>
+        </div>
+        <button className="user-logout-btn" onClick={handleLogout}>
+          {t('logout') || 'Logout'}
+        </button>
       </div>
 
       <div className="carousel-container">
@@ -74,10 +92,10 @@ const Home = () => {
         <p className="welcome-subtitle">{t('welcome_subtitle')}</p>
 
         <div className="action-cards">
-          <div className="action-card" onClick={handleStudentClick}>
-            <div className="icon"><img src="/Student.svg" alt="Student" /></div>
+          <div className="action-card" onClick={handleUserClick}>
+            <div className="icon"><img src="/Student.svg" alt="User" /></div>
             <h3>{t('fresh_registration')}</h3>
-            {showStudentLinks ? (
+            {showUserLinks ? (
               <div className="download-links">
                 <span onClick={(e) => { e.stopPropagation(); window.open('/above-ssc', '_self'); }}>{t('above_ssc')}</span>
                 <span onClick={(e) => { e.stopPropagation(); window.open('/below-ssc', '_self'); }}>{t('below_ssc')}</span>
@@ -127,6 +145,9 @@ const Home = () => {
               <div className="download-links">
                 <a href="/belowSSCApplicationForm.pdf" download="Below_SSC_Form.pdf" onClick={(e) => e.stopPropagation()}>{t('below_ssc')}</a>
                 <a href="/aboveSSCApplicationForm.pdf" download="Above_SSC_Form.pdf" onClick={(e) => e.stopPropagation()}>{t('above_ssc')}</a>
+                <a href="/CitizenForm.pdf" download="Citizen_Form.pdf" onClick={(e) => e.stopPropagation()}>{t('citizen_form')}</a>
+                <a href="/GovEmployeeForm.pdf" download="Govt_Employee_Form.pdf" onClick={(e) => e.stopPropagation()}>{t('gov_employee_form')}</a>
+                <a href="/NonGovEmployeeForm.pdf" download="Non_Govt_Employee_Form.pdf" onClick={(e) => e.stopPropagation()}>{t('non_gov_employee_form')}</a>
                 <a href="/NGOApplicationForm.pdf" download="NGO_Application.pdf" onClick={(e) => e.stopPropagation()}>{t('ngo_application')}</a>
                 <a href="/JournalistForm.pdf" download="Journalist_Form.pdf" onClick={(e) => e.stopPropagation()}>{t('journalist_form')}</a>
               </div>
