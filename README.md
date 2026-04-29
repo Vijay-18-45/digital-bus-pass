@@ -1,131 +1,88 @@
-🚌 APSRTC Digital Bus Pass System
+# APSRTC Digital Bus Pass System
 
 A web application to simplify and automate the APSRTC student bus pass process.
-Students can apply online, upload documents, make payments, and receive a digital bus pass with a QR code — without standing in long queues.
 
-📌 What This Project Does
+## Features
 
-The system helps:
+- **Online student registration & login**: Easy sign-up and login portal.
+- **Apply for new or renewal bus pass**: Streamlined application process.
+- **Upload required documents**: Securely upload ID proofs and forms.
+- **Admin verification dashboard**: Dedicated portal for authorities to verify and approve applications.
+- **Secure authentication using JWT**: Role-based access (Student / Admin) with encrypted tokens.
+- **Online payment integration**: Convenient digital payments.
+- **Automatic PDF bus pass generation**: Get a downloadable PDF instantly upon approval.
+- **QR code for verification**: Easy scanning for validity checks.
+- **SMS / Email notifications**: Stay updated on application status via Twilio and Email.
+- **Workflow automation using n8n**: Automated background tasks for seamless operations.
 
-👩‍🎓 Students apply for bus passes online
+## Tech Stack
 
-🏢 Authorities verify and approve applications
+- **Frontend**: React.js, Vite, React Router, Socket.io-client
+- **Backend**: Node.js, Express.js
+- **Database**: MySQL / MongoDB (Supported via backend drivers)
+- **Tools & APIs**: JWT (Authentication), Twilio (SMS), Nodemailer (Email)
 
-⚡ System automatically generate digital passes after approval
+## How It Works
 
-📩 Send updates through SMS, Email, or WhatsApp
+1. **Apply**: Students register and submit their bus pass application online, uploading necessary documents.
+2. **Verify**: Admins log into the dashboard, review the submitted documents, and approve or reject the application.
+3. **Generate**: Upon approval, the system automatically generates a digital bus pass in PDF format complete with a verifiable QR code.
+4. **Notify**: The student is notified via SMS or Email that their pass is ready for download and use.
 
-Everything is handled digitally and securely.
+## Installation
 
-🚀 Main Features
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Vijay-18-45/digital-bus-pass.git
+   cd digital-bus-pass
+   ```
 
-✅ Online student registration & login
+2. **Frontend Setup:**
+   ```bash
+   cd frontend
+   npm install
+   ```
 
-✅ Apply for new or renewal bus pass
+3. **Backend Setup:**
+   ```bash
+   cd backend
+   npm install
+   ```
 
-✅ Upload required documents
+4. **Environment Variables:**
+   - Create a `.env` file in the `backend` directory.
+   - Add your database credentials, JWT secret key, and API keys for Twilio/Nodemailer (e.g., `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`).
 
-✅ Admin verification dashboard
+## Usage
 
-✅ Secure authentication using JWT
+1. **Start the Backend Server:**
+   ```bash
+   cd backend
+   npm run server
+   # Server runs on the designated PORT
+   ```
 
-✅ Online payment integration
+2. **Start the Frontend Application:**
+   ```bash
+   cd frontend
+   npm run dev
+   # Vite server runs on localhost:5173
+   ```
 
-✅ Automatic PDF bus pass generation
+3. Open your browser and navigate to the frontend URL to use the application.
 
-✅ QR code for verification
+## Screenshots
 
-✅ SMS / Email / WhatsApp notifications
+*(Add screenshots of the application here, such as the landing page, student dashboard, admin verification panel, and the generated digital pass.)*
 
-✅ Workflow automation using n8n
+## Future Improvements
 
-🏗️ Technologies Used
-Frontend
+- Mobile application version for iOS and Android.
+- Aadhaar-based verification for faster approvals.
+- AI-based fraud detection for document scanning.
+- Multi-language support (English, Telugu, Hindi).
+- Real-time bus tracking integration.
 
-React.js
+## Author
 
-Backend
-
-Node.js
-
-Express.js
-
-Database (Choose any one)
-
-MySQL
-
-PostgreSQL
-
-MongoDB
-
-Other Tools
-
-n8n (Automation)
-
-JWT (Authentication)
-
-QR Code Generator
-
-Payment Gateway API
-
-Cloud Deployment (AWS / GCP / Vercel)
-
-📁 Project Structure
-client/        → React frontend
-server/        → Node.js backend
-docs/          → System design documents
-.env.example   → Environment variables template
-🔐 Security
-
-JWT-based login system
-
-Protected API routes
-
-Secure password hashing
-
-Role-based access (Student / Admin)
-
-⚙️ How to Run the Project
-1️⃣ Clone the Repository
-git clone <your-repo-link>
-cd apsrtc-bus-pass
-2️⃣ Install Dependencies
-
-Frontend:
-
-cd client
-npm install
-npm start
-
-Backend:
-
-cd server
-npm install
-npm start
-3️⃣ Setup Environment Variables
-
-Create a .env file using .env.example and add:
-
-Database credentials
-
-JWT secret key
-
-Payment API keys
-
-SMS/Email API keys
-
-🎯 Future Improvements
-
-Mobile app version
-
-Aadhaar-based verification
-
-AI-based fraud detection
-
-Multi-language support
-
-Real-time bus tracking integration
-
-📄 License
-
-This project is licensed under the MIT License.
+- **Vijay** - [GitHub Profile](https://github.com/Vijay-18-45)
